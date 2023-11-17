@@ -7,7 +7,7 @@ Adafruit_DCMotor *myOtherMotor = AFMS.getMotor(4); // right motor
 int L_S = 6;
 int R_S = 7;
 int F2_S = 8;
-int F_S = 10;
+int F_S = 9;
 bool turning = false;
 int junctionCount = 0;
 
