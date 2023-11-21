@@ -21,7 +21,7 @@ const float MOTOR_SPEED_FACTOR[2] = { 1, 0.88 };
 #define ADC_SOLUTION  (1023.0)//ADC accuracy of Arduino UNO is 10bit 
 
 //line sensors
-const int LINE_SENSOR_PINS[4] = { 6, 7, 8, 9 }; // [BL, FL, FR, BR]
+const int LINE_SENSOR_PINS[4] = { 6, 8, 9, 7 }; // [BL, FL, FR, BR]
 int line_sensor_readings[4]; // [BL, FL, FR, BR]
 
 //ultrasonic sensor
