@@ -57,9 +57,9 @@ int searchcondition;
 // 1 - junction detection
 // 2 - block found
 int depositcondition;
-// 0 - line following 
-// 1 - junction detection
-// 2 - 
+// 0 - rotation
+// 1 - line following
+// 2 - junction
 int subcondition;
 // 0 - going straight
 // 1 - going left
