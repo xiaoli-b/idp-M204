@@ -142,13 +142,13 @@ bool junctionCheck(){
 }
 
 void rotate180() {
-  leftMotor -> setSpeed(255);
-  rightMotor -> setSpeed(255);
+  leftMotor -> setSpeed(150);
+  rightMotor -> setSpeed(150);
   leftMotor -> run(FORWARD);
   rightMotor -> run(BACKWARD);
-  delay(2520);
-  leftSpeed = 255;
-  rightSpeed = 255;
+  delay(950);
+  leftSpeed = 150;
+  rightSpeed = 150;
 }
 
 void rotate90R() {
@@ -156,7 +156,7 @@ void rotate90R() {
   rightMotor -> setSpeed(255);
   leftMotor -> run(FORWARD);
   rightMotor -> run(BACKWARD);
-  delay(1260);
+  delay(500);
   leftSpeed = 255;
   rightSpeed = 255;
 }
@@ -165,40 +165,60 @@ void rotate90L() {
   rightMotor -> setSpeed(255);
   leftMotor -> run(BACKWARD);
   rightMotor -> run(FORWARD);
-  delay(1260);
+  delay(500);
   leftSpeed = 255;
   rightSpeed = 255;
 }
 
 String j0Decide2() {
   rotate180();
+  forwards();
+  delay(200);
 }
 String j1Decide2() {
   rotate180();
+    forwards();
+  delay(200);
 }
 String j2Decide2() {
   rotate180();
+    forwards();
+  delay(200);
 }
 String j3Decide2() {
   rotate180();
+    forwards();
+  delay(200);
 }
 String j4Decide2() {
   rotate90R();
+    forwards();
+  delay(200);
 }
 String j5Decide2(){
   rotate90L();
+    forwards();
+  delay(200);
 }
 String j6Decide2() {
   rotate180(); 
+    forwards();
+  delay(200);
 }
 String j7Decide2() {
   rotate180(); 
+    forwards();
+  delay(200);
 }
 String j8Decide2() {
   rotate180(); 
+    forwards();
+  delay(200);
 }
 String j9Decide2(){
   return;
+    forwards();
+  delay(200);
 }
 
 String j0Decide() {
@@ -1026,7 +1046,7 @@ void loop(){
 }
 
 void searchFirst() {
-  if (distance < 22) {
+  if (distance < 30) {
     forwards();
     delay(500);
     Stop();
