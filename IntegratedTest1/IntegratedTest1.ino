@@ -9,6 +9,10 @@ VL53L0X sensor;
 uint16_t distance = 0;
 
 
+
+
+
+
 Adafruit_MotorShield AFMS = Adafruit_MotorShield();
 Adafruit_DCMotor *leftMotor= AFMS.getMotor(3); //left motor
 Adafruit_DCMotor *rightMotor = AFMS.getMotor(4); // right motor
@@ -33,9 +37,9 @@ int sensityPin = A3;
 float dist, sensity;
 
 //led 
-const int led_R = 4; // red LED
+const int led_R = 10; // red LED
 const int led_G = 5; // green LED
-const int led_B = 10; // blue LED
+const int led_B = 4; // blue LED
 
 //hall sensor
 const int inputMagneticPin = 3; // choose the input pin
@@ -1095,6 +1099,16 @@ void searchFirst() {
       } else if (turning) {
         if ((frontleft == 1) && (frontright == 1)) {
           Stop();
+          if ((frontleft == 1) && (frontright == 0)) {
+        turnLeft();
+      } else if ((frontleft == 0) && (frontright == 1)) {
+        turnRight();
+      } else if ((frontleft == 1) && (frontright == 1)) {
+        forwards();
+      }
+      else {
+        forwards();
+      }
           forwards();
           delay(200);
           turning = false;
