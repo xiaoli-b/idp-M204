@@ -9,6 +9,10 @@ VL53L0X sensor;
 uint16_t distance = 0;
 
 
+
+
+
+
 Adafruit_MotorShield AFMS = Adafruit_MotorShield();
 Adafruit_DCMotor *leftMotor= AFMS.getMotor(3); //left motor
 Adafruit_DCMotor *rightMotor = AFMS.getMotor(4); // right motor
@@ -33,9 +37,9 @@ int sensityPin = A3;
 float dist, sensity;
 
 //led 
-const int led_R = 4; // red LED
+const int led_R = 10; // red LED
 const int led_G = 5; // green LED
-const int led_B = 10; // blue LED
+const int led_B = 4; // blue LED
 
 //hall sensor
 const int inputMagneticPin = 3; // choose the input pin
@@ -78,7 +82,7 @@ void forwards(){
 }
 
 void junctionRight(){
-  leftMotor -> setSpeed(169);
+  leftMotor -> setSpeed(160);
   rightMotor -> setSpeed(150);
   leftMotor -> run(BACKWARD);
   rightMotor -> run(FORWARD);
@@ -87,7 +91,7 @@ void junctionRight(){
 }
 
 void junctionLeft(){
-  leftMotor -> setSpeed(169);
+  leftMotor -> setSpeed(160);
   rightMotor -> setSpeed(150);
   leftMotor -> run(FORWARD);
   rightMotor -> run(BACKWARD);
@@ -96,11 +100,11 @@ void junctionLeft(){
 }
 
 void turnRight(){
-  leftMotor -> setSpeed(200);
+  leftMotor -> setSpeed(145);
   rightMotor -> setSpeed(0);
   leftMotor -> run(BACKWARD);
   rightMotor -> run(RELEASE);
-  leftSpeed = 125;
+  leftSpeed = 145;
   rightSpeed = 0;
 
 
@@ -108,7 +112,7 @@ void turnRight(){
 
 void turnLeft(){
   leftMotor -> setSpeed(0);
-  rightMotor -> setSpeed(200);
+  rightMotor -> setSpeed(145);
   leftMotor -> run(RELEASE);
   rightMotor -> run(BACKWARD);
   leftSpeed = 0;
@@ -962,7 +966,7 @@ void setup() {
   pinMode(F_R, INPUT);
   pinMode(F_L, INPUT);
 
-  // pinMode(led_B, OUTPUT);
+  pinMode(led_B, OUTPUT);
   // pinMode(led_G, OUTPUT);
   // pinMode(led_R, OUTPUT);
 
@@ -994,12 +998,12 @@ void loop(){
   Serial.println(backleft);
   Serial.println(backright);
   
-  // if ((leftSpeed > 0) || (rightSpeed > 0)) {
-  //   digitalWrite(led_B, ((millis() / 500) % 2));
-  // }
-  // else {
-  //   digitalWrite(led_B, LOW);
-  // }
+  if ((leftSpeed > 0) || (rightSpeed > 0)) {
+    digitalWrite(led_B, ((millis() / 500) % 2));
+  }
+  else {
+    digitalWrite(led_B, LOW);
+  }
 
   if ((findCounter == 0) && (depositCounter == 0)){
     searchFirst();
@@ -1059,7 +1063,10 @@ void searchFirst() {
         turnLeft();
       } else if ((frontleft == 0) && (frontright == 1)) {
         turnRight();
-      } else {
+      } else if ((frontleft == 1) && (frontright == 1)) {
+        forwards();
+      }
+      else {
         forwards();
       }
     }
@@ -1074,7 +1081,7 @@ void searchFirst() {
       if (junctionDecide() == "straight") {
         subcondition = 0;
         forwards();
-        delay(1000);
+        delay(500);
         searchcondition = 0;
         junctionCount++;
       }
@@ -1082,31 +1089,40 @@ void searchFirst() {
       if (!turning) {
         turning = true;
         if (subcondition == 1) {
-          Stop();
           junctionLeft();
-          delay(700);
+          delay(500);
         }
         else if (subcondition == 2) {
-          Stop();
           junctionRight();
-          delay(700);
+          delay(500);
         }
       } else if (turning) {
-        if ((frontleft == 0) || (frontright == 0)) {
+        if ((frontleft == 1) && (frontright == 1)) {
+          Stop();
+          if ((frontleft == 1) && (frontright == 0)) {
+        turnLeft();
+      } else if ((frontleft == 0) && (frontright == 1)) {
+        turnRight();
+      } else if ((frontleft == 1) && (frontright == 1)) {
+        forwards();
+      }
+      else {
+        forwards();
+      }
+          forwards();
+          delay(200);
+          turning = false;
+          subcondition = 0;
+          searchcondition = 0;
+          junctionCount++;
+          
+        } else {
           if (subcondition == 1) {
             junctionLeft();
           }
           if (subcondition == 2) {
             junctionRight();
           }
-        } else {
-  
-          turning = false;
-          forwards();
-          delay(200);
-          subcondition = 0;
-          searchcondition = 0;
-          junctionCount++;
         }
       }
     }
@@ -1251,13 +1267,18 @@ String junctionDecide(){
   else if (junctionCount == 2 || junctionCount == 3) {
     // Turn left
     return "left";
-  } else if (junctionCount >= 4 && junctionCount <= 7) {
+  } else if (junctionCount >= 4 && junctionCount <= 6) {
     // Go straight
     return "straight";
-  } else if (junctionCount == 8 || junctionCount == 9) {
+  } else if (junctionCount == 7 || junctionCount == 8) {
     // Turn left
     return "left";
+  }
+  else if (junctionCount == 9) {
+    // Turn left
+    return "straight";
   } else if (junctionCount == 10) {
+
     // Reset junctionCount
     junctionCount = 0;
     return "straight";
