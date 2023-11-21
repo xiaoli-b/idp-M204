@@ -78,25 +78,25 @@ void forwards(){
 }
 
 void junctionRight(){
-  leftMotor -> setSpeed(157);
-  rightMotor -> setSpeed(140);
+  leftMotor -> setSpeed(169);
+  rightMotor -> setSpeed(150);
   leftMotor -> run(BACKWARD);
   rightMotor -> run(FORWARD);
-  leftSpeed = 157;
-  rightSpeed = 140;
+  leftSpeed = 169;
+  rightSpeed = 150;
 }
 
 void junctionLeft(){
-  leftMotor -> setSpeed(157);
-  rightMotor -> setSpeed(140);
+  leftMotor -> setSpeed(169);
+  rightMotor -> setSpeed(150);
   leftMotor -> run(FORWARD);
   rightMotor -> run(BACKWARD);
-  leftSpeed = 157;
-  rightSpeed = 140;
+  leftSpeed = 169;
+  rightSpeed = 150;
 }
 
 void turnRight(){
-  leftMotor -> setSpeed(125);
+  leftMotor -> setSpeed(200);
   rightMotor -> setSpeed(0);
   leftMotor -> run(BACKWARD);
   rightMotor -> run(RELEASE);
@@ -108,7 +108,7 @@ void turnRight(){
 
 void turnLeft(){
   leftMotor -> setSpeed(0);
-  rightMotor -> setSpeed(140);
+  rightMotor -> setSpeed(200);
   leftMotor -> run(RELEASE);
   rightMotor -> run(BACKWARD);
   leftSpeed = 0;
