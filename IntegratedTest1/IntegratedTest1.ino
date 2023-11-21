@@ -37,8 +37,8 @@ int sensityPin = A3;
 float dist, sensity;
 
 //led 
-const int led_R = 10; // red LED
-const int led_G = 5; // green LED
+const int led_R = 5; // red LED
+//const int led_G = 7; // green LED
 const int led_B = 4; // blue LED
 
 //hall sensor
@@ -73,12 +73,12 @@ int depositCounter = 0;
 bool magnetic;
 
 void forwards(){
-  leftMotor -> setSpeed(230);
-  rightMotor -> setSpeed(204);
+  leftMotor -> setSpeed(200);
+  rightMotor -> setSpeed(178);
   leftMotor -> run(BACKWARD);
   rightMotor -> run(BACKWARD);
-  leftSpeed = 230;
-  rightSpeed = 204;
+  leftSpeed = 200;
+  rightSpeed = 278;
 }
 
 void junctionRight(){
@@ -952,13 +952,13 @@ void setup() {
   }
   Serial.println("Motor Shield found.");
 
-  // Wire.begin();
-  // sensor.setTimeout(500);
-  // if (!sensor.init())
-  // {
-  //   Serial.println("Failed to detect and initialize sensor!");
-  //   while (1) {}
-  // }
+  Wire.begin();
+  sensor.setTimeout(500);
+  if (!sensor.init())
+  {
+    Serial.println("Failed to detect and initialize sensor!");
+    while (1) {}
+  }
 
   // defining pin modes
   pinMode(L, INPUT); 
@@ -967,11 +967,11 @@ void setup() {
   pinMode(F_L, INPUT);
 
   pinMode(led_B, OUTPUT);
-  // pinMode(led_G, OUTPUT);
-  // pinMode(led_R, OUTPUT);
+//  pinMode(led_G, OUTPUT);
+  pinMode(led_R, OUTPUT);
 
-  // pinMode(pushGreen, INPUT);
-  // pinMode(inputMagneticPin, INPUT);
+  //pinMode(pushGreen, INPUT);
+  pinMode(inputMagneticPin, INPUT);
 
   searchcondition = 0;
   depositcondition = 0;
@@ -993,7 +993,7 @@ void loop(){
   frontleft = digitalRead(F_L);
   frontright = digitalRead(F_R);
 
-  //distance = sensor.readRangeSingleMillimeters();
+  distance = sensor.readRangeSingleMillimeters();
   //Serial.println(distance);
   Serial.println(backleft);
   Serial.println(backright);
@@ -1026,32 +1026,32 @@ void loop(){
 }
 
 void searchFirst() {
-  // if (distance < 25) {
-  //   forwards();
-  //   delay(500);
-  //   Stop();
-  //   valMagnetic = digitalRead(inputMagneticPin);
-  //   if(valMagnetic == HIGH){ // magnetic
-  //     digitalWrite(led_R, HIGH); //Turn off led
-  //     delay(5500); // needs to be 5 seconds
-  //     digitalWrite(led_R, LOW); //Turn on led
-  //     delay(1000);// turn LED OFF
-  //     magnetic = true;
-  //   }
+  if (distance < 22) {
+    forwards();
+    delay(500);
+    Stop();
+    valMagnetic = digitalRead(inputMagneticPin);
+    if(valMagnetic == HIGH){ // magnetic
+      digitalWrite(led_R, HIGH); //Turn off led
+      delay(5500); // needs to be 5 seconds
+      digitalWrite(led_R, LOW); //Turn on led
+      delay(1000);// turn LED OFF
+      magnetic = true;
+    }
     
-  //   // GREEN LED FOR NON-MAGNETIC
-  //   else if(valMagnetic == LOW){ // not magnetic
-  //     digitalWrite(led_G, HIGH); //Turn off led
-  //     delay(5500); // needs to be 5 seconds
-  //     digitalWrite(led_G, LOW); //Turn on led
-  //     delay(1000);// turn LED OFF
-  //     magnetic = false;
-  //   }
-  // findCounter++;
-  // rjunctionCount = junctionCount;
-  // junctionCount = 0;
-  // return;
-  // }
+    // GREEN LED FOR NON-MAGNETIC
+    else if(valMagnetic == LOW){ // not magnetic
+      digitalWrite(led_R, HIGH); //Turn off led
+      delay(5500); // needs to be 5 seconds
+      digitalWrite(led_R, LOW); //Turn on led
+      delay(1000);// turn LED OFF
+      magnetic = false;
+    }
+  findCounter++;
+  rjunctionCount = junctionCount;
+  junctionCount = 0;
+  return;
+  }
   if (searchcondition == 0) {
     if (junctionCheck() == true) {
       searchcondition = 1;
