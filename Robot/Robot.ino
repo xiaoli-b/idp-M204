@@ -29,16 +29,18 @@ int sensityPin = A3;
 float dist, sensity;
 
 //led 
-const int led_R = 4; // red LED
-const int led_G = 5; // green LED
-const int led_B = 10; // blue LED
+const int led_R = 5; // red LED
+const int led_G = 7; // green LED
+const int led_B = 4; // blue LED
 
 //hall sensor
 const int inputMagneticPin = 3; // choose the input pin
 int valMagnetic; // variable for reading the pin status
 
 //push buttons
-const int pushGreen = 2; // push button pin
+const int green_button_pin = 2; // push button pin
+int val_green_button;
+
 
 // Robot attributes
 enum Direction { north, east, south, west };
@@ -48,15 +50,23 @@ cppQueue path(sizeof(int));
 enum Status { line_following, turning };
 Status current_status;
 
+enum Turn { left90=-1, straight=0, right90=1, turn180=2 };
 
-int update_line_sensor_readings() {
+
+void waitForButtonPress() {
+    do {
+        val_green_button = digitalRead(green_button_pin);
+    } while (val_green_button == LOW);
+}
+
+int updateLineSensorReadings() {
     for (int i = 0; i < 4; i++) 
     {
         line_sensor_readings[i] = digitalRead(LINE_SENSOR_PINS[i]);
     }
 }
 
-void set_motors(int new_left_speed, int new_right_speed) {
+void setMotors(int new_left_speed, int new_right_speed) {
     left_speed = new_left_speed * MOTOR_SPEED_FACTOR[0];
     right_speed = new_right_speed * MOTOR_SPEED_FACTOR[1];
     left_motor -> setSpeed(abs(left_speed));
@@ -65,29 +75,121 @@ void set_motors(int new_left_speed, int new_right_speed) {
     right_motor -> run((right_speed == 0) ? RELEASE : (right_speed > 0) ? BACKWARD : FORWARD);
 }
 
-void forwards(){
-    set_motors(230, 230);
+void goForwards(){
+    setMotors(150, 150);
 }
-void junctionRight(){
-    set_motors(169, -169);
+void spinRight(){
+    setMotors(150, -150);
 }
 
-void junctionLeft(){
-    set_motors(-169, 169);
+void spinLeft(){
+    setMotors(-150, 150);
 }
 
 void turnRight(){
-    set_motors(200, 0);
+    setMotors(150, 0);
 }
 
 void turnLeft(){
-    set_motors(0, 200);
+    setMotors(0, 150);
 }
 
-void Stop(){
-    set_motors(0, 0);
-  }
+void stop(){
+    setMotors(0, 0);
+}
 
+bool detectJunction(){
+    // Are we currently at a junction
+    
+    return ((line_sensor_readings[0]==1) || (line_sensor_readings[3]==1));
+}
+
+Direction getDesiredDirection(int start_node, int end_node) {
+    // Get the compass direction between two adjacent nodes
+
+    if (start_node/5 == end_node/5) {
+        // nodes are on the same line
+        int difference = end_node - start_node;
+        if (abs(difference) != 1){
+            Serial.println("Not sure how I got here");
+        } else {
+            return difference > 0 ? east : west;
+        }
+    } else if (start_node % 5 == end_node % 5) {
+        int difference = end_node / 5 - start_node / 5;
+        return difference > 0 ? north : south;
+    } else {
+        Serial.println("Not sure how I got here either");
+    }
+}
+
+Turn getDesiredTurn(Direction start_direction, Direction end_direction) {
+    int difference = (((end_direction - start_direction) + 1) % 4) -1; // -1, 0, 1 or 2
+    return Turn(difference);
+}
+
+void lineFollow() {
+    // Line following
+
+    if ((line_sensor_readings[1] == 1) && (line_sensor_readings[2] == 0)) {
+        // Deviating right
+        turnLeft();
+    } else if ((line_sensor_readings[1] == 0) && (line_sensor_readings[2] == 1)) {
+        // Deviating left
+        turnRight();
+    } else {
+        goForwards();
+    }
+}
+
+void turnUntilNextLine() {
+    // Having already started a turn, continue turning until you hit the perpendicular white line
+    
+    while (true) {
+        // Turn until front sensors are off the line
+        updateLineSensorReadings();
+        if (line_sensor_readings[1] == line_sensor_readings[2] && line_sensor_readings[2] == 0) {
+            break;
+        }
+    }
+    while (true) {
+        // Continue turning until the front sensors are back on a white line
+        updateLineSensorReadings();
+        if (line_sensor_readings[1] == line_sensor_readings[2] && line_sensor_readings[2] == 1) {
+            break;
+        }
+    }
+}
+
+void makeTurn(Turn turn) {
+    switch (turn) {
+        case left90:
+            spinLeft();
+            break;
+        case straight:
+            goForwards();
+            return;
+        case right90:
+            spinRight();
+            break;
+        case turn180:
+            spinRight();
+            break;
+    }
+    if (turn == turn180) {
+        digitalWrite(led_B, HIGH);
+        stop();
+        delay(5000);
+    }
+    delay(500);
+    digitalWrite(led_R, HIGH);
+    turnUntilNextLine();
+    if (turn == turn180) {
+        turnUntilNextLine();
+    }
+    digitalWrite(led_R, LOW);
+
+}
 
 void setup() {
 
@@ -113,17 +215,15 @@ void setup() {
         pinMode(pin, INPUT);
     }
 
-    // pinMode(led_B, OUTPUT);
-    // pinMode(led_G, OUTPUT);
-    // pinMode(led_R, OUTPUT);
+    pinMode(led_B, OUTPUT);
+    pinMode(led_G, OUTPUT);
+    pinMode(led_R, OUTPUT);
 
-    // pinMode(pushGreen, INPUT);
+    pinMode(green_button_pin, INPUT);
+    waitForButtonPress();
     // pinMode(inputMagneticPin, INPUT);
     
     // magnetic = false;
-
-    forwards();
-    delay(1000);
 
     current_node = -1;
     current_direction = north;
@@ -133,24 +233,38 @@ void setup() {
     }
     current_status = line_following;
 
+    goForwards();
+    delay(1000);
 }
 
 void loop(){
-    update_line_sensor_readings();
+    val_green_button = digitalRead(green_button_pin);
+    if (val_green_button == HIGH) {
+        stop();
+        waitForButtonPress();
+        goForwards();
+    }
+    updateLineSensorReadings();
     for (int reading : line_sensor_readings){
         Serial.print(reading);
     }
     Serial.println();
 
-    // Line following
-    if ((line_sensor_readings[1] == 1) && (line_sensor_readings[2] == 0)) {
-        // Deviating right
-        turnLeft();
-      } else if ((line_sensor_readings[1] == 0) && (line_sensor_readings[2] == 1)) {
-        // Deviating left
-        turnRight();
-      } else {
-        forwards();
-      }
+    lineFollow();
+
+    if (detectJunction()) {
+        path.pop(&current_node);
+        int next_node;
+        path.peek(&next_node);
+        if (current_node==2 and next_node == 3) {
+            stop();
+            delay(2000);
+        }
+        Direction desired_direction = getDesiredDirection(current_node, next_node);
+        Turn desired_turn = getDesiredTurn(current_direction, desired_direction);
+        makeTurn(desired_turn);
+        goForwards();
+        delay(500);
+    }
 
 }
