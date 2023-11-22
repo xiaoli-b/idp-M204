@@ -49,7 +49,7 @@ Direction current_direction;
 int current_node;
 cppQueue path(sizeof(int));
 enum Status { searching, retrieving }; // Either searching for a block or taking a block back
-enum BlockStatus { no_block=-1, non_magnetic=0, magnetic=1 }
+enum BlockStatus { no_block=-1, non_magnetic=0, magnetic=1 };
 Status current_status;
 BlockStatus current_block_status;
 
@@ -92,7 +92,7 @@ void setMotors(int new_left_speed, int new_right_speed) {
 }
 
 void goForwards(){
-    setMotors(172, 160);
+    setMotors(175, 160);
 }
 void spinRight(){
     setMotors(155, -150);
@@ -115,8 +115,12 @@ void stop(){
 }
 
 void rotate180() {
-    setMotors(-150, 150);
-    delay(3000);
+    if ((current_node / 5) < 2) {
+        setMotors(150, -150);
+    } else {
+        setMotors(-150, 150);
+    }
+    delay(4080);
     stop();
 }
 
@@ -146,7 +150,7 @@ Direction getDesiredDirection(int start_node, int end_node) {
 }
 
 Turn getDesiredTurn(Direction start_direction, Direction end_direction) {
-    int difference = (((end_direction - start_direction + 1) % 4) - 1 + 4) % 4; // -1, 0, 1 or 2
+    int difference = ((end_direction - start_direction + 4) % 4 + 1) % 4 - 1; // -1, 0, 1 or 2
     return Turn(difference);
 }
 
@@ -221,10 +225,13 @@ void handleJunction() {
     printLineSensorReadings();
     
     path.pop(&current_node);
-
     Direction desired_direction;
+
     if (path.isEmpty()) {
         desired_direction = south;
+        stop();
+        delay(1000);
+        goForwards();
     } else {
         int next_node;
         path.peek(&next_node);
@@ -276,10 +283,10 @@ void handleBlockFound() {
         delay(1000);
     }
     rotate180();
-    goForwards();
-    delay(200);
     current_direction = (current_direction + 2) % 4;
     setReturnPath();
+    goForwards();
+    delay(200);
 }
 
 void setReturnPath() {
@@ -326,8 +333,8 @@ void setup() {
 
     current_node = -1;
     current_direction = north;
-    // int new_path[10] = { 2, 3, 4, 9, 8, 7, 6, 5, 0, 1 }; // anti-clockwise around loop
-    int new_path[10] = { 2, 1, 0, 5, 6, 7, 8, 9, 4, 3 }; // clockwise around loop
+    int new_path[10] = { 2, 3, 4, 9, 8, 7, 6, 5, 0, 1 }; // anti-clockwise around loop
+    // int new_path[10] = { 2, 1, 0, 5, 6, 7, 8, 9, 4, 3 }; // clockwise around loop
     for (int n : new_path) {
         path.push(&n);
     }
@@ -336,7 +343,7 @@ void setup() {
     current_block_status = no_block;
 
     goForwards();
-    delay(1000);
+    delay(2000);
 }
 
 void loop(){
@@ -349,6 +356,8 @@ void loop(){
         delay(1000);
         goForwards();
     }
+
+    digitalWrite(led_B, ((millis() / 500) % 2));
 
     // Update sensors
     updateLineSensorReadings();
