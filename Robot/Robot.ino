@@ -31,7 +31,7 @@ float dist, sensity;
 
 // LEDs
 const int led_R = 5; // red LED
-const int led_G = 7; // green LED
+const int led_G = 10; // green LED
 const int led_B = 4; // blue LED
 
 // Magnet sensor
@@ -48,8 +48,10 @@ enum Direction { north, east, south, west };
 Direction current_direction;
 int current_node;
 cppQueue path(sizeof(int));
-enum Status { line_following, turning };
+enum Status { searching, retrieving }; // Either searching for a block or taking a block back
+enum BlockStatus { no_block=-1, non_magnetic=0, magnetic=1 }
 Status current_status;
+BlockStatus current_block_status;
 
 enum Turn { left90=-1, straight=0, right90=1, turn180=2 };
 
@@ -90,22 +92,22 @@ void setMotors(int new_left_speed, int new_right_speed) {
 }
 
 void goForwards(){
-    setMotors(200, 178);
+    setMotors(172, 160);
 }
 void spinRight(){
-    setMotors(160, -150);
+    setMotors(155, -150);
 }
 
 void spinLeft(){
-    setMotors(-160, 150);
+    setMotors(-155, 150);
 }
 
 void turnRight(){
-    setMotors(145, 0);
+    setMotors(140, 0);
 }
 
 void turnLeft(){
-    setMotors(0, 145);
+    setMotors(0, 140);
 }
 
 void stop(){
@@ -114,7 +116,7 @@ void stop(){
 
 void rotate180() {
     setMotors(-150, 150);
-    delay(950);
+    delay(3000);
     stop();
 }
 
@@ -167,13 +169,13 @@ void turnUntilNextLine() {
     Serial.print("Beginning turn to next line. LSRs: ");
     printLineSensorReadings();
 
-    while (true) {
-        // Turn until front sensors are off the line
-        updateLineSensorReadings();
-        if ((line_sensor_readings[1] == line_sensor_readings[2]) && (line_sensor_readings[2] == 0)) {
-            break;
-        }
-    }
+    // while (true) {
+    //     // Turn until front sensors are off the line
+    //     updateLineSensorReadings();
+    //     if ((line_sensor_readings[1] == line_sensor_readings[2]) && (line_sensor_readings[2] == 0)) {
+    //         break;
+    //     }
+    // }
 
     Serial.print("Continuing turn until front sensors hit line. LSRs: ");
     printLineSensorReadings();
@@ -205,7 +207,7 @@ void makeTurn(Turn turn) {
             spinRight();
             break;
     }
-    delay(500);
+    delay(700);
     turnUntilNextLine();
     if (turn == turn180) {
         turnUntilNextLine();
@@ -219,16 +221,23 @@ void handleJunction() {
     printLineSensorReadings();
     
     path.pop(&current_node);
-    int next_node;
-    path.peek(&next_node);
 
-    Serial.print("Next segment: ");
-    Serial.print(current_node);
-    Serial.print("-->");
-    Serial.print(next_node);
-    Serial.println();
+    Direction desired_direction;
+    if (path.isEmpty()) {
+        desired_direction = south;
+    } else {
+        int next_node;
+        path.peek(&next_node);
 
-    Direction desired_direction = getDesiredDirection(current_node, next_node);
+        Serial.print("Next segment: ");
+        Serial.print(current_node);
+        Serial.print("-->");
+        Serial.print(next_node);
+        Serial.println();
+
+        desired_direction = getDesiredDirection(current_node, next_node);
+    }
+
     Turn desired_turn = getDesiredTurn(current_direction, desired_direction);
 
     Serial.print("Direction change: ");
@@ -249,14 +258,18 @@ void handleBlockFound() {
     goForwards();
     delay(500);
     stop();
+    delay(1000);
     val_magnetic_sensor = digitalRead(magnetic_sensor_pin);
     if (val_magnetic_sensor == HIGH) {
         // Detected magnetic block
+        current_block_status = magnetic;
         digitalWrite(led_R, HIGH);
         delay(5500);
         digitalWrite(led_R, LOW);
         delay(1000);
     } else {
+        // Block is non-magnetic
+        current_block_status = non_magnetic;
         digitalWrite(led_G, HIGH);
         delay(5500);
         digitalWrite(led_G, LOW);
@@ -310,18 +323,17 @@ void setup() {
     pinMode(green_button_pin, INPUT);
     waitForButtonPress();
     pinMode(magnetic_sensor_pin, INPUT);
-    
-    // magnetic = false;
 
     current_node = -1;
     current_direction = north;
-    int new_path[10] = { 2, 3, 4, 9, 8, 7, 6, 5, 0, 1 }; // anti-clockwise around loop
-    // int new_path[10] = { 2, 1, 0, 5, 6, 7, 8, 9, 4, 3 }; // clockwise around loop
+    // int new_path[10] = { 2, 3, 4, 9, 8, 7, 6, 5, 0, 1 }; // anti-clockwise around loop
+    int new_path[10] = { 2, 1, 0, 5, 6, 7, 8, 9, 4, 3 }; // clockwise around loop
     for (int n : new_path) {
         path.push(&n);
     }
 
-    current_status = line_following;
+    current_status = searching;
+    current_block_status = no_block;
 
     goForwards();
     delay(1000);
@@ -342,7 +354,8 @@ void loop(){
     updateLineSensorReadings();
     tof_distance = tof_sensor.readRangeSingleMillimeters();
 
-    if (tof_distance < 30) {
+    if ((current_status == searching) && (tof_distance < 30)) {
+        current_status = retrieving;
         handleBlockFound();
     } else if (detectJunction()) {
         handleJunction();
