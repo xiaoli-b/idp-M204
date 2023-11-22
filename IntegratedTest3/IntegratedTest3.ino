@@ -1,4 +1,17 @@
-//Code for search and retrieval of first two blocks
+// Code for search and retrieval of first two blocks
+/* 
+Node numbering for block retrieval (start heading towards node 2):
+
+|           |
+5--6--7--8--9
+|  |  |  |  |
+0--1--2--3--4
+|     |     |
+
+  N      0
+W-|-E  3-|-1
+  S      2
+ */
 
 #include <Adafruit_MotorShield.h>
 #include "Wire.h"
@@ -52,15 +65,26 @@ enum Status { searching, retrieving }; // Either searching for a block or taking
 enum BlockStatus { no_block=-1, non_magnetic=0, magnetic=1 };
 Status current_status;
 BlockStatus current_block_status;
+int number_of_blocks_retrieved = 0;
 
 enum Turn { left90=-1, straight=0, right90=1, turn180=2 };
 
 // Board constants
 const int ANTICLOCKWISE_PATH[10] = { 2, 3, 4, 9, 8, 7, 6, 5, 0, 1 };
 const int FIRST_RETRIEVAL_RETURN_PATH[10] = { 5, 2, -1, 2, 3, 6, 7, 5, 3, 4 };
-// The i^th element of the above array is the next node to travel to from node i
-// on the return journey having just collected a block. This prevents crossing a
-// node that hasn't already been crossed, which may contain the second block.
+/* The i^th element of the above array is the next node to travel to from node i
+on the return journey having just collected a block. This prevents crossing a
+node that hasn't already been crossed, which may contain the second block. */
+
+void panic() {
+    stop();
+    digitalWrite(led_R, HIGH);
+    digitalWrite(led_G, HIGH);
+    digitalWrite(led_B, HIGH);
+    while (true) {
+        delay(1000);
+    }
+}
 
 void waitForButtonPress() {
     do {
@@ -119,52 +143,38 @@ void stop(){
 }
 
 void rotate180() {
-    // if ((current_node / 5) < 2) {
-    //     setMotors(150, -150);
-    // } else {
-    //     setMotors(-150, 150);
-    // }
     setMotors(-150, 150);
     delay(2950);
     stop();
 }
 
 void rotate90R() {
-    // if ((current_node / 5) < 2) {
-    //     setMotors(150, -150);
-    // } else {
-    //     setMotors(-150, 150);
-    // }
     setMotors(150, -150);
     delay(2040);
     stop();
 }
 
 void rotate90L() {
-    // if ((current_node / 5) < 2) {
-    //     setMotors(150, -150);
-    // } else {
-    //     setMotors(-150, 150);
-    // }
     setMotors(-150, 150);
     delay(2040);
     stop();
 }
 
 bool detectJunction(){
-    // Are we currently at a junction
+    /* Are we currently at a junction */
     
     return ((line_sensor_readings[0]==1) || (line_sensor_readings[3]==1));
 }
 
 Direction getDesiredDirection(int start_node, int end_node) {
-    // Get the compass direction between two adjacent nodes
+    /* Get the compass direction between two adjacent nodes */
 
     if ((start_node/5) == (end_node/5)) {
         // nodes are on the same line
         int difference = end_node - start_node;
         if (abs(difference) != 1){
-            Serial.println("Not sure how I got here");
+            Serial.println("Non-adjacent nodes (1)");
+            panic();
         } else {
             return difference > 0 ? east : west;
         }
@@ -172,17 +182,20 @@ Direction getDesiredDirection(int start_node, int end_node) {
         int difference = (end_node / 5) - (start_node / 5);
         return difference > 0 ? north : south;
     } else {
-        Serial.println("Not sure how I got here either");
+        Serial.println("Non-adjacent nodes (2)");
+        panic();
     }
 }
 
 Turn getDesiredTurn(Direction start_direction, Direction end_direction) {
-    int difference = ((end_direction - start_direction + 4) % 4 + 1) % 4 - 1; // -1, 0, 1 or 2
+    /* Get the turn required to get from one compass direction to another */
+    int difference = ((end_direction - start_direction + 4) % 4 + 1) % 4 - 1; 
+    // -1, 0, 1, 2 --> 90L, none, 90R, 180
     return Turn(difference);
 }
 
 void lineFollow() {
-    // Line following
+    /* Line following */
 
     if ((line_sensor_readings[1] == 1) && (line_sensor_readings[2] == 0)) {
         // Deviating right
@@ -196,7 +209,8 @@ void lineFollow() {
 }
 
 void turnUntilNextLine() {
-    // Having already started a turn, continue turning until you hit the perpendicular white line
+    /* Having already started a turn, continue turning until you hit the perpendicular white line */
+
     Serial.print("Beginning turn to next line. LSRs: ");
     printLineSensorReadings();
 
@@ -246,7 +260,8 @@ void makeTurn(Turn turn) {
 }
 
 void handleJunction() {
-    digitalWrite(led_R, HIGH);
+    stop();
+    delay(500);
     Serial.println("Junction detected");
     Serial.print("LSRs at junction: ");
     printLineSensorReadings();
@@ -255,10 +270,19 @@ void handleJunction() {
     Direction desired_direction;
 
     if (path.isEmpty()) {
-        desired_direction = south;
-        stop();
-        delay(1000);
-        goForwards();
+        if ((current_status == retrieving) && ((current_node == 2) || (current_node == -1))) {
+            if (current_node == 2) {
+                desired_direction = south;
+                int next_node = -1;
+                path.push(&next_node);
+            } else {
+                depositBlock();
+                return; // TODO: Don't like the structure of this
+            }
+        } else {
+            Serial.println("No path set and not retrieving at node 2");
+            panic();
+        }
     } else {
         int next_node;
         path.peek(&next_node);
@@ -285,10 +309,10 @@ void handleJunction() {
     current_direction = desired_direction;
     goForwards();
     delay(500);
-    digitalWrite(led_R, LOW);
 }
 
 void handleBlockFound() {
+    current_status = retrieving;
     goForwards();
     delay(300);
     stop();
@@ -314,16 +338,68 @@ void handleBlockFound() {
     current_direction = (current_direction + 2) % 4;
     setReturnPath();
     goForwards();
-    delay(200);
+    delay(500); /* Increasing this delay should help the post-block confusion
+    but will cause issues if the 180 turn isn't perfect */
 }
 
 void setReturnPath() {
+    // TODO: Be smart and choose the shortest path possible when retrieving the 
+    // second block. Issue currently is handling the node/junction underneath the block.
+
     path.clean();
     int next_node = current_node;
     path.push(&next_node);
     while (next_node != 2) {
         next_node = FIRST_RETRIEVAL_RETURN_PATH[next_node];
         path.push(&next_node);
+    }
+}
+
+void depositBlock() {
+    /* Predefined code depositing a block. Starting from the top of the start box facing
+    south, finishing past the top of the start block facing north (on the way to 2) */
+
+    goForwards();
+    delay(1350);
+    stop();
+    delay(500);
+    if (current_block_status == magnetic) {
+        rotate90R();
+    } else {
+        rotate90L();
+    }
+    goForwards();
+    delay(7100);
+    stop();
+    delay(1000);
+    goBackwards();
+    delay(7700);
+    stop();
+    delay(500);
+    if (current_block_status == magnetic) {
+        rotate90R();
+    } else {
+        rotate90L();
+    }
+    stop();
+    delay(200);
+    
+    number_of_blocks_retrieved++;
+    current_block_status = no_block;
+    current_direction = north;
+    current_node = -1;
+
+    if (number_of_blocks_retrieved < 2){
+        current_status = searching;
+        for (int n : ANTICLOCKWISE_PATH) {
+            path.push(&n);
+        }
+        goForwards();
+        delay(2000);
+    } else {
+        digitalWrite(led_B, HIGH);
+        delay(5500);
+        panic();
     }
 }
 
@@ -355,18 +431,16 @@ void setup() {
     pinMode(led_G, OUTPUT);
     pinMode(led_R, OUTPUT);
 
+    pinMode(magnetic_sensor_pin, INPUT);
+
     pinMode(green_button_pin, INPUT);
     waitForButtonPress();
-    pinMode(magnetic_sensor_pin, INPUT);
 
     current_node = -1;
     current_direction = north;
-    int new_path[10] = { 2, 3, 4, 9, 8, 7, 6, 5, 0, 1 }; // anti-clockwise around loop
-    // int new_path[10] = { 2, 1, 0, 5, 6, 7, 8, 9, 4, 3 }; // clockwise around loop
-    for (int n : new_path) {
+    for (int n : ANTICLOCKWISE_PATH) {
         path.push(&n);
     }
-
     current_status = searching;
     current_block_status = no_block;
 
@@ -391,33 +465,12 @@ void loop(){
     updateLineSensorReadings();
     tof_distance = tof_sensor.readRangeSingleMillimeters();
     val_magnetic_sensor = digitalRead(magnetic_sensor_pin);
+
     if ((current_status == searching) && ((tof_distance < 30))) {
-        current_status = retrieving;
         handleBlockFound();
     } else if (detectJunction()) {
         handleJunction();
     } else {
         lineFollow();
     }
-
 }
-// have already deifned the functions for you. please put in the right place
-
-    // goForwards();
-    // delay(1350);
-    // stop();
-    // delay(500);
-    // rotate90R();
-    // goForwards();
-    // delay(7100);
-    // stop();
-    // delay(1000);
-    // goBackwards();
-    // delay(7700);
-    // stop();
-    // delay(500);
-    // rotate90R();
-    // stop();
-    // delay(200);
-    // goForwards();
-    // delay(2000);
