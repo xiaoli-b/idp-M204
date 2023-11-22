@@ -107,7 +107,7 @@ bool detectJunction(){
 Direction getDesiredDirection(int start_node, int end_node) {
     // Get the compass direction between two adjacent nodes
 
-    if (start_node/5 == end_node/5) {
+    if ((start_node/5) == (end_node/5)) {
         // nodes are on the same line
         int difference = end_node - start_node;
         if (abs(difference) != 1){
@@ -115,8 +115,8 @@ Direction getDesiredDirection(int start_node, int end_node) {
         } else {
             return difference > 0 ? east : west;
         }
-    } else if (start_node % 5 == end_node % 5) {
-        int difference = end_node / 5 - start_node / 5;
+    } else if ((start_node % 5) == (end_node % 5)) {
+        int difference = (end_node / 5) - (start_node / 5);
         return difference > 0 ? north : south;
     } else {
         Serial.println("Not sure how I got here either");
@@ -148,14 +148,14 @@ void turnUntilNextLine() {
     while (true) {
         // Turn until front sensors are off the line
         updateLineSensorReadings();
-        if (line_sensor_readings[1] == line_sensor_readings[2] && line_sensor_readings[2] == 0) {
+        if ((line_sensor_readings[1] == line_sensor_readings[2]) && (line_sensor_readings[2] == 0)) {
             break;
         }
     }
     while (true) {
         // Continue turning until the front sensors are back on a white line
         updateLineSensorReadings();
-        if (line_sensor_readings[1] == line_sensor_readings[2] && line_sensor_readings[2] == 1) {
+        if ((line_sensor_readings[1] == line_sensor_readings[2]) && (line_sensor_readings[2] == 1)) {
             break;
         }
     }
