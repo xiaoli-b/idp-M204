@@ -52,20 +52,6 @@ Status current_status;
 
 enum Turn { left90=-1, straight=0, right90=1, turn180=2 };
 
-
-// class Queue{
-//     public:
-//         int max_length;
-//         int start;
-//         int end;
-//         int* queue;
-//         bool push(int x) {
-//             if e
-//             end = (end+1)%max_length;
-//             queue[end] = x;
-//         }
-// }
-
 void waitForButtonPress() {
     do {
         val_green_button = digitalRead(green_button_pin);
@@ -77,6 +63,13 @@ int updateLineSensorReadings() {
     {
         line_sensor_readings[i] = digitalRead(LINE_SENSOR_PINS[i]);
     }
+}
+
+void printLineSensorReadings() {
+    for (int reading : line_sensor_readings) {
+        Serial.print(reading);
+    }
+    Serial.println();
 }
 
 void setMotors(int new_left_speed, int new_right_speed) {
@@ -157,7 +150,9 @@ void lineFollow() {
 
 void turnUntilNextLine() {
     // Having already started a turn, continue turning until you hit the perpendicular white line
-    
+    Serial.print("Beginning turn to next line. LSRs: ");
+    printLineSensorReadings();
+
     while (true) {
         // Turn until front sensors are off the line
         updateLineSensorReadings();
@@ -165,6 +160,10 @@ void turnUntilNextLine() {
             break;
         }
     }
+
+    Serial.print("Continuing turn until front sensors hit line. LSRs: ");
+    printLineSensorReadings();
+
     while (true) {
         // Continue turning until the front sensors are back on a white line
         updateLineSensorReadings();
@@ -172,6 +171,9 @@ void turnUntilNextLine() {
             break;
         }
     }
+
+    Serial.print("Next line hit. LSRs: ");
+    printLineSensorReadings();
 }
 
 void makeTurn(Turn turn) {
@@ -199,11 +201,12 @@ void makeTurn(Turn turn) {
 void handleJunction() {
     digitalWrite(led_R, HIGH);
     Serial.println("Junction detected");
-    int new_current_node;
-    path.pop(&new_current_node);
+    Serial.print("LSRs at junction: ");
+    printLineSensorReadings();
+    
+    path.pop(&current_node);
     int next_node;
     path.peek(&next_node);
-    current_node = new_current_node;
 
     Serial.print("Next segment: ");
     Serial.print(current_node);
@@ -222,6 +225,7 @@ void handleJunction() {
     Serial.println();
 
     makeTurn(desired_turn);
+    current_direction = desired_direction;
     goForwards();
     delay(500);
     digitalWrite(led_R, LOW);
@@ -246,7 +250,7 @@ void setup() {
     //   while (1) {}
     // }
 
-    // defining pin modes
+    // Defining pin modes
     for (int pin : LINE_SENSOR_PINS) {
         pinMode(pin, INPUT);
     }
@@ -267,24 +271,6 @@ void setup() {
     for (int n : new_path) {
         path.push(&n);
     }
-
-    // Serial.println("Testing queue");
-    // int i = 0;
-    // while (!path.isEmpty()) {
-    //     int c;
-    //     path.pop(&c);
-    //     Serial.print(c);
-    //     Serial.print("-->");
-    //     int n;
-    //     path.peek(&n);
-    //     Serial.print(n);
-    //     Serial.println();
-        // i++;
-        // Serial.println(i);
-    // }
-    // while (true) {
-    //     delay(1000);
-    // }
 
     current_status = line_following;
 
