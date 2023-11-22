@@ -53,6 +53,19 @@ Status current_status;
 enum Turn { left90=-1, straight=0, right90=1, turn180=2 };
 
 
+// class Queue{
+//     public:
+//         int max_length;
+//         int start;
+//         int end;
+//         int* queue;
+//         bool push(int x) {
+//             if e
+//             end = (end+1)%max_length;
+//             queue[end] = x;
+//         }
+// }
+
 void waitForButtonPress() {
     do {
         val_green_button = digitalRead(green_button_pin);
@@ -76,22 +89,22 @@ void setMotors(int new_left_speed, int new_right_speed) {
 }
 
 void goForwards(){
-    setMotors(150, 150);
+    setMotors(200, 200);
 }
 void spinRight(){
-    setMotors(150, -150);
+    setMotors(160, -160);
 }
 
 void spinLeft(){
-    setMotors(-150, 150);
+    setMotors(-160, 160);
 }
 
 void turnRight(){
-    setMotors(150, 0);
+    setMotors(145, 0);
 }
 
 void turnLeft(){
-    setMotors(0, 150);
+    setMotors(0, 145);
 }
 
 void stop(){
@@ -176,19 +189,42 @@ void makeTurn(Turn turn) {
             spinRight();
             break;
     }
-    if (turn == turn180) {
-        digitalWrite(led_B, HIGH);
-        stop();
-        delay(5000);
-    }
     delay(500);
-    digitalWrite(led_R, HIGH);
     turnUntilNextLine();
     if (turn == turn180) {
         turnUntilNextLine();
     }
-    digitalWrite(led_R, LOW);
+}
 
+void handleJunction() {
+    digitalWrite(led_R, HIGH);
+    Serial.println("Junction detected");
+    int new_current_node;
+    path.pop(&new_current_node);
+    int next_node;
+    path.peek(&next_node);
+    current_node = new_current_node;
+
+    Serial.print("Next segment: ");
+    Serial.print(current_node);
+    Serial.print("-->");
+    Serial.print(next_node);
+    Serial.println();
+
+    Direction desired_direction = getDesiredDirection(current_node, next_node);
+    Turn desired_turn = getDesiredTurn(current_direction, desired_direction);
+
+    Serial.print("Desired direction: ");
+    Serial.print(desired_direction);
+    Serial.println();
+    Serial.print("Desired turn: ");
+    Serial.print(desired_turn);
+    Serial.println();
+
+    makeTurn(desired_turn);
+    goForwards();
+    delay(500);
+    digitalWrite(led_R, LOW);
 }
 
 void setup() {
@@ -228,9 +264,28 @@ void setup() {
     current_node = -1;
     current_direction = north;
     int new_path[10] = { 2, 3, 4, 9, 8, 7, 6, 5, 0, 1 };
-    for (int node : new_path) {
-        path.push(node);
+    for (int n : new_path) {
+        path.push(&n);
     }
+
+    // Serial.println("Testing queue");
+    // int i = 0;
+    // while (!path.isEmpty()) {
+    //     int c;
+    //     path.pop(&c);
+    //     Serial.print(c);
+    //     Serial.print("-->");
+    //     int n;
+    //     path.peek(&n);
+    //     Serial.print(n);
+    //     Serial.println();
+        // i++;
+        // Serial.println(i);
+    // }
+    // while (true) {
+    //     delay(1000);
+    // }
+
     current_status = line_following;
 
     goForwards();
@@ -245,26 +300,15 @@ void loop(){
         goForwards();
     }
     updateLineSensorReadings();
-    for (int reading : line_sensor_readings){
-        Serial.print(reading);
-    }
-    Serial.println();
+    // for (int reading : line_sensor_readings){
+    //     Serial.print(reading);
+    // }
+    // Serial.println();
 
     lineFollow();
 
     if (detectJunction()) {
-        path.pop(&current_node);
-        int next_node;
-        path.peek(&next_node);
-        if (current_node==2 and next_node == 3) {
-            stop();
-            delay(2000);
-        }
-        Direction desired_direction = getDesiredDirection(current_node, next_node);
-        Turn desired_turn = getDesiredTurn(current_direction, desired_direction);
-        makeTurn(desired_turn);
-        goForwards();
-        delay(500);
+        handleJunction();
     }
 
 }
