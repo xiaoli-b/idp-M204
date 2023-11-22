@@ -5,9 +5,9 @@
 #include "VL53L0X.h"
 #include <cppQueue.h>
 
-//time of flight sensor
-VL53L0X sensor; 
-uint16_t distance = 0;
+// Time of Flight (ToF) sensor
+VL53L0X tof_sensor; 
+uint16_t tof_distance = 0;
 
 
 Adafruit_MotorShield AFMS = Adafruit_MotorShield();
@@ -15,12 +15,13 @@ Adafruit_DCMotor *left_motor= AFMS.getMotor(3); //left motor
 Adafruit_DCMotor *right_motor = AFMS.getMotor(4); // right motor
 int left_speed;
 int right_speed;
-const float MOTOR_SPEED_FACTOR[2] = { 1, 0.88 };
+// const float MOTOR_SPEED_FACTOR[2] = { 1, 0.88 };
+const float MOTOR_SPEED_FACTOR[2] = { 1, 1 };
 
 #define MAX_RANG  (520)//the max measurement value of the module is 520cm(a little bit longer than effective max range)
 #define ADC_SOLUTION  (1023.0)//ADC accuracy of Arduino UNO is 10bit 
 
-//line sensors
+// Line sensors
 const int LINE_SENSOR_PINS[4] = { 6, 8, 9, 7 }; // [BL, FL, FR, BR]
 int line_sensor_readings[4]; // [BL, FL, FR, BR]
 
@@ -28,16 +29,16 @@ int line_sensor_readings[4]; // [BL, FL, FR, BR]
 int sensityPin = A3;
 float dist, sensity;
 
-//led 
+// LEDs
 const int led_R = 5; // red LED
 const int led_G = 7; // green LED
 const int led_B = 4; // blue LED
 
-//hall sensor
-const int inputMagneticPin = 3; // choose the input pin
-int valMagnetic; // variable for reading the pin status
+// Magnet sensor
+const int magnetic_sensor_pin = 3; // choose the input pin
+int val_magnetic_sensor; // variable for reading the pin status
 
-//push buttons
+// Push buttons
 const int green_button_pin = 2; // push button pin
 int val_green_button;
 
@@ -51,6 +52,13 @@ enum Status { line_following, turning };
 Status current_status;
 
 enum Turn { left90=-1, straight=0, right90=1, turn180=2 };
+
+// Board constants
+const int ANTICLOCKWISE_PATH[10] = { 2, 3, 4, 9, 8, 7, 6, 5, 0, 1 };
+const int FIRST_RETRIEVAL_RETURN_PATH[10] = { 5, 2, -1, 2, 3, 6, 7, 5, 3, 4 };
+// The i^th element of the above array is the next node to travel to from node i
+// on the return journey having just collected a block. This prevents crossing a
+// node that hasn't already been crossed, which may contain the second block.
 
 void waitForButtonPress() {
     do {
@@ -82,14 +90,14 @@ void setMotors(int new_left_speed, int new_right_speed) {
 }
 
 void goForwards(){
-    setMotors(200, 200);
+    setMotors(200, 178);
 }
 void spinRight(){
-    setMotors(160, -160);
+    setMotors(160, -150);
 }
 
 void spinLeft(){
-    setMotors(-160, 160);
+    setMotors(-160, 150);
 }
 
 void turnRight(){
@@ -102,6 +110,12 @@ void turnLeft(){
 
 void stop(){
     setMotors(0, 0);
+}
+
+void rotate180() {
+    setMotors(-150, 150);
+    delay(950);
+    stop();
 }
 
 bool detectJunction(){
@@ -130,7 +144,7 @@ Direction getDesiredDirection(int start_node, int end_node) {
 }
 
 Turn getDesiredTurn(Direction start_direction, Direction end_direction) {
-    int difference = (((end_direction - start_direction) + 1) % 4) -1; // -1, 0, 1 or 2
+    int difference = (((end_direction - start_direction + 1) % 4) - 1 + 4) % 4; // -1, 0, 1 or 2
     return Turn(difference);
 }
 
@@ -217,12 +231,12 @@ void handleJunction() {
     Direction desired_direction = getDesiredDirection(current_node, next_node);
     Turn desired_turn = getDesiredTurn(current_direction, desired_direction);
 
-    Serial.print("Desired direction: ");
-    Serial.print(desired_direction);
-    Serial.println();
-    Serial.print("Desired turn: ");
-    Serial.print(desired_turn);
-    Serial.println();
+    Serial.print("Direction change: ");
+    Serial.print(current_direction);
+    Serial.print("-->");
+    Serial.println(desired_direction);
+    Serial.print("Turn required: ");
+    Serial.println(desired_turn);
 
     makeTurn(desired_turn);
     current_direction = desired_direction;
@@ -231,10 +245,44 @@ void handleJunction() {
     digitalWrite(led_R, LOW);
 }
 
+void handleBlockFound() {
+    goForwards();
+    delay(500);
+    stop();
+    val_magnetic_sensor = digitalRead(magnetic_sensor_pin);
+    if (val_magnetic_sensor == HIGH) {
+        // Detected magnetic block
+        digitalWrite(led_R, HIGH);
+        delay(5500);
+        digitalWrite(led_R, LOW);
+        delay(1000);
+    } else {
+        digitalWrite(led_G, HIGH);
+        delay(5500);
+        digitalWrite(led_G, LOW);
+        delay(1000);
+    }
+    rotate180();
+    goForwards();
+    delay(200);
+    current_direction = (current_direction + 2) % 4;
+    setReturnPath();
+}
+
+void setReturnPath() {
+    path.clean();
+    int next_node = current_node;
+    path.push(&next_node);
+    while (next_node != 2) {
+        next_node = FIRST_RETRIEVAL_RETURN_PATH[next_node];
+        path.push(&next_node);
+    }
+}
+
 void setup() {
 
     Serial.begin(9600);           // set up Serial library at 9600 bps
-    Serial.println("Adafruit Motorshield v2 - DC Motor test!");
+    Serial.println("IDP team 204 - grid block collection");
 
     if (!AFMS.begin()) {         // create with the default frequency 1.6KHz
         Serial.println("Could not find Motor Shield. Check wiring.");
@@ -242,13 +290,13 @@ void setup() {
     }
     Serial.println("Motor Shield found.");
 
-    // Wire.begin();
-    // sensor.setTimeout(500);
-    // if (!sensor.init())
-    // {
-    //   Serial.println("Failed to detect and initialize sensor!");
-    //   while (1) {}
-    // }
+    Wire.begin();
+    tof_sensor.setTimeout(500);
+    if (!tof_sensor.init())
+    {
+      Serial.println("Failed to detect and initialize sensor!");
+      while (1) {}
+    }
 
     // Defining pin modes
     for (int pin : LINE_SENSOR_PINS) {
@@ -261,13 +309,14 @@ void setup() {
 
     pinMode(green_button_pin, INPUT);
     waitForButtonPress();
-    // pinMode(inputMagneticPin, INPUT);
+    pinMode(magnetic_sensor_pin, INPUT);
     
     // magnetic = false;
 
     current_node = -1;
     current_direction = north;
-    int new_path[10] = { 2, 3, 4, 9, 8, 7, 6, 5, 0, 1 };
+    int new_path[10] = { 2, 3, 4, 9, 8, 7, 6, 5, 0, 1 }; // anti-clockwise around loop
+    // int new_path[10] = { 2, 1, 0, 5, 6, 7, 8, 9, 4, 3 }; // clockwise around loop
     for (int n : new_path) {
         path.push(&n);
     }
@@ -279,22 +328,26 @@ void setup() {
 }
 
 void loop(){
+    // Pause if button pressed
     val_green_button = digitalRead(green_button_pin);
     if (val_green_button == HIGH) {
         stop();
+        delay(1000);
         waitForButtonPress();
+        delay(1000);
         goForwards();
     }
+
+    // Update sensors
     updateLineSensorReadings();
-    // for (int reading : line_sensor_readings){
-    //     Serial.print(reading);
-    // }
-    // Serial.println();
+    tof_distance = tof_sensor.readRangeSingleMillimeters();
 
-    lineFollow();
-
-    if (detectJunction()) {
+    if (tof_distance < 30) {
+        handleBlockFound();
+    } else if (detectJunction()) {
         handleJunction();
+    } else {
+        lineFollow();
     }
 
 }
