@@ -27,7 +27,7 @@ void setup(){
   Serial.println("Motor Shield found.");
 
   myMotor -> setSpeed(255);
-  myOtherMotor -> setSpeed(255);
+  myOtherMotor -> setSpeed(230);
   myMotor -> run(FORWARD);
   myOtherMotor -> run(FORWARD);
   delay(2500);
@@ -38,8 +38,8 @@ void loop(){
 }
 
 void forward(){
-  myMotor -> setSpeed(200);
-  myOtherMotor -> setSpeed(200);
+  myMotor -> setSpeed(255);
+  myOtherMotor -> setSpeed(230);
   myMotor -> run(FORWARD);
   myOtherMotor -> run(FORWARD);
 }
@@ -97,30 +97,30 @@ void Stop(){
 }
 
 void LineFollow(){
-  if((digitalRead(F_S) == 1)&&(digitalRead(F2_S) == 1)){
+  if((digitalRead(F_S) == 0)&&(digitalRead(F2_S) == 0)){
     forward();
   }
   if((digitalRead(R_S) == 1) && (digitalRead(L_S) == 1) ){
     JunctionDetection();
   }
-  if((digitalRead(R_S) == 1) && (digitalRead(L_S) == 0) && ((digitalRead(F_S) == 1)||(digitalRead(F2_S) == 1)) ){
+  if((digitalRead(R_S) == 1) && (digitalRead(L_S) == 0) ){
 
     JunctionDetection();
   }
-  if((digitalRead(L_S) == 1) && (digitalRead(R_S) == 0) && ((digitalRead(F_S) == 1)||(digitalRead(F2_S) == 1))){
+  if((digitalRead(L_S) == 1) && (digitalRead(R_S) == 0)){
 
     JunctionDetection();
   } 
   
   
-  if((digitalRead(F2_S) == 0)  ){
-    turnRight();
+  if((digitalRead(F2_S) == 1) && (digitalRead(F_S) == 0)   ){
+    turnLeft();
     
 
     // Adjust the delay as needed based on your robot's behavior
   }
-  if((digitalRead(F_S) == 0) ){
-    turnLeft();
+  if((digitalRead(F_S) == 1) && (digitalRead(F2_S) == 0)  ){
+    turnRight();
      // Adjust the delay as needed based on your robot's behavior
   }
   

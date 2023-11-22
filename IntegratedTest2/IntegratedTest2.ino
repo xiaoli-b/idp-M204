@@ -38,7 +38,7 @@ float dist, sensity;
 
 //led 
 const int led_R = 5; // red LED
-//const int led_G = 7; // green LED
+const int led_G = 10; // green LED
 const int led_B = 4; // blue LED
 
 //hall sensor
@@ -73,38 +73,38 @@ int depositCounter = 0;
 bool magnetic;
 
 void forwards(){
-  leftMotor -> setSpeed(200);
-  rightMotor -> setSpeed(178);
+  leftMotor -> setSpeed(172);
+  rightMotor -> setSpeed(160);
   leftMotor -> run(BACKWARD);
   rightMotor -> run(BACKWARD);
-  leftSpeed = 200;
-  rightSpeed = 278;
+  leftSpeed = 172;
+  rightSpeed = 160;
 }
 
 void junctionRight(){
-  leftMotor -> setSpeed(160);
+  leftMotor -> setSpeed(155);
   rightMotor -> setSpeed(150);
   leftMotor -> run(BACKWARD);
   rightMotor -> run(FORWARD);
-  leftSpeed = 169;
+  leftSpeed = 155;
   rightSpeed = 150;
 }
 
 void junctionLeft(){
-  leftMotor -> setSpeed(160);
+  leftMotor -> setSpeed(155);
   rightMotor -> setSpeed(150);
   leftMotor -> run(FORWARD);
   rightMotor -> run(BACKWARD);
-  leftSpeed = 169;
+  leftSpeed = 155;
   rightSpeed = 150;
 }
 
 void turnRight(){
-  leftMotor -> setSpeed(145);
+  leftMotor -> setSpeed(140);
   rightMotor -> setSpeed(0);
   leftMotor -> run(BACKWARD);
   rightMotor -> run(RELEASE);
-  leftSpeed = 145;
+  leftSpeed = 140;
   rightSpeed = 0;
 
 
@@ -112,12 +112,11 @@ void turnRight(){
 
 void turnLeft(){
   leftMotor -> setSpeed(0);
-  rightMotor -> setSpeed(145);
+  rightMotor -> setSpeed(140);
   leftMotor -> run(RELEASE);
   rightMotor -> run(BACKWARD);
   leftSpeed = 0;
-  rightSpeed = 145;
-
+  rightSpeed = 140;
 
 }
 
@@ -146,79 +145,98 @@ void rotate180() {
   rightMotor -> setSpeed(150);
   leftMotor -> run(FORWARD);
   rightMotor -> run(BACKWARD);
-  delay(950);
+  delay(3000);
   leftSpeed = 150;
   rightSpeed = 150;
 }
 
 void rotate90R() {
-  leftMotor -> setSpeed(255);
-  rightMotor -> setSpeed(255);
+  leftMotor -> setSpeed(150);
+  rightMotor -> setSpeed(150);
   leftMotor -> run(FORWARD);
   rightMotor -> run(BACKWARD);
-  delay(500);
-  leftSpeed = 255;
-  rightSpeed = 255;
+  delay(1500);
+  leftSpeed = 150;
+  rightSpeed = 150;
 }
 void rotate90L() {
-  leftMotor -> setSpeed(255);
-  rightMotor -> setSpeed(255);
+  leftMotor -> setSpeed(150);
+  rightMotor -> setSpeed(150);
   leftMotor -> run(BACKWARD);
   rightMotor -> run(FORWARD);
-  delay(500);
-  leftSpeed = 255;
-  rightSpeed = 255;
+  delay(1500);
+  leftSpeed = 150;
+  rightSpeed = 150;
 }
 
 String j0Decide2() {
   rotate180();
+  Stop();
+  delay(1000);
   forwards();
-  delay(200);
+  delay(500);
 }
 String j1Decide2() {
   rotate180();
+  Stop();
+  delay(1000);
     forwards();
-  delay(200);
+  delay(500);
 }
 String j2Decide2() {
   rotate180();
+  Stop();
+  delay(1000);
     forwards();
-  delay(200);
+  delay(500);
 }
 String j3Decide2() {
   rotate180();
+  Stop();
+  delay(1000);
     forwards();
-  delay(200);
+  delay(500);
 }
 String j4Decide2() {
   rotate90R();
+  Stop();
+  delay(1000);
     forwards();
-  delay(200);
+  delay(500);
 }
 String j5Decide2(){
   rotate90L();
+  Stop();
+  delay(1000);
     forwards();
-  delay(200);
+  delay(500);
 }
 String j6Decide2() {
   rotate180(); 
+  Stop();
+  delay(1000);
     forwards();
-  delay(200);
+  delay(500);
 }
 String j7Decide2() {
-  rotate180(); 
+  rotate180();
+  Stop();
+  delay(1000); 
     forwards();
-  delay(200);
+  delay(500);
 }
 String j8Decide2() {
   rotate180(); 
+  Stop();
+  delay(1000);
     forwards();
-  delay(200);
+  delay(500);
 }
 String j9Decide2(){
-  return;
+Stop();
+  delay(1000);
     forwards();
-  delay(200);
+  delay(500);
 }
 
 String j0Decide() {
@@ -370,14 +388,15 @@ void j0Retrieve(){
       else if (j0Decide() == "straight") {
         subcondition = 0;
         forwards();
-        delay(1000);
+        delay(500);
+        depositcondition = 0;
+        rjunctionCount2++;
       }
       else if (j0Decide() == "stop") {
         subcondition = 0;
         Stop();
         delay(1000);
         depositcondition = 3;
-        return;
       }
 
     } else {
@@ -385,32 +404,37 @@ void j0Retrieve(){
         turning = true;
         if (subcondition == 1) {
           junctionLeft();
+          delay(500);
         }
         if (subcondition == 2) {
           junctionRight();
+          delay(500);
         }
-        delay(200);
-      } else if (turning) {
-        if ((backleft == 0) || (backright == 0)) {
+
+      } 
+      else if (turning) {
+        if ((frontleft == 0) || (frontright == 0)) {
           if (subcondition == 1) {
             junctionLeft();
           }
           if (subcondition == 2) {
             junctionRight();
           }
-        } else {
+        }
+         else {
           Stop();
-          delay(1000);
-          turning = false;
-          forwards();
           delay(500);
+          turning = false;
           if ((frontleft == 1) && (frontright == 0)) {
             turnLeft();
-          } else if ((frontleft == 0) && (frontright == 1)) {
-            turnRight();
-          } else {
-            forwards();
-          }
+      } else if ((frontleft == 0) && (frontright == 1)) {
+        turnRight();
+      } else if ((frontleft == 1) && (frontright == 1)) {
+        forwards();
+      }
+      else{
+        forwards();
+      }
           subcondition = 0;
           depositcondition = 1;
           rjunctionCount2++;
@@ -430,14 +454,15 @@ void j1Retrieve(){
       else if (j1Decide() == "straight") {
         subcondition = 0;
         forwards();
-        delay(1000);
+        delay(500);
+        depositcondition = 0;
+        rjunctionCount2++;
       }
       else if (j1Decide() == "stop") {
         subcondition = 0;
         Stop();
         delay(1000);
         depositcondition = 3;
-        return;
       }
 
     } else {
@@ -445,32 +470,37 @@ void j1Retrieve(){
         turning = true;
         if (subcondition == 1) {
           junctionLeft();
+          delay(500);
         }
         if (subcondition == 2) {
           junctionRight();
+          delay(500);
         }
-        delay(200);
-      } else if (turning) {
-        if ((backleft == 0) || (backright == 0)) {
+
+      } 
+      else if (turning) {
+        if ((frontleft == 0) || (frontright == 0)) {
           if (subcondition == 1) {
             junctionLeft();
           }
           if (subcondition == 2) {
             junctionRight();
           }
-        } else {
+        }
+         else {
           Stop();
-          delay(1000);
-          turning = false;
-          forwards();
           delay(500);
+          turning = false;
           if ((frontleft == 1) && (frontright == 0)) {
-            turnLeft();
-          } else if ((frontleft == 0) && (frontright == 1)) {
-            turnRight();
-          } else {
-            forwards();
-          }
+        turnLeft();
+      } else if ((frontleft == 0) && (frontright == 1)) {
+        turnRight();
+      } else if ((frontleft == 1) && (frontright == 1)) {
+        forwards();
+      }
+      else{
+        forwards();
+      }
           subcondition = 0;
           depositcondition = 1;
           rjunctionCount2++;
@@ -490,14 +520,15 @@ void j2Retrieve(){
       else if (j2Decide() == "straight") {
         subcondition = 0;
         forwards();
-        delay(1000);
+        delay(500);
+        depositcondition = 0;
+        rjunctionCount2++;
       }
       else if (j2Decide() == "stop") {
         subcondition = 0;
         Stop();
         delay(1000);
         depositcondition = 3;
-        return;
       }
 
     } else {
@@ -505,32 +536,37 @@ void j2Retrieve(){
         turning = true;
         if (subcondition == 1) {
           junctionLeft();
+          delay(500);
         }
         if (subcondition == 2) {
           junctionRight();
+          delay(500);
         }
-        delay(200);
-      } else if (turning) {
-        if ((backleft == 0) || (backright == 0)) {
+
+      } 
+      else if (turning) {
+        if ((frontleft == 0) || (frontright == 0)) {
           if (subcondition == 1) {
             junctionLeft();
           }
           if (subcondition == 2) {
             junctionRight();
           }
-        } else {
+        }
+         else {
           Stop();
-          delay(1000);
-          turning = false;
-          forwards();
           delay(500);
+          turning = false;
           if ((frontleft == 1) && (frontright == 0)) {
-            turnLeft();
-          } else if ((frontleft == 0) && (frontright == 1)) {
-            turnRight();
-          } else {
-            forwards();
-          }
+        turnLeft();
+      } else if ((frontleft == 0) && (frontright == 1)) {
+        turnRight();
+      } else if ((frontleft == 1) && (frontright == 1)) {
+        forwards();
+      }
+      else{
+        forwards();
+      }
           subcondition = 0;
           depositcondition = 1;
           rjunctionCount2++;
@@ -550,14 +586,15 @@ void j3Retrieve(){
       else if (j3Decide() == "straight") {
         subcondition = 0;
         forwards();
-        delay(1000);
+        delay(500);
+        depositcondition = 0;
+        rjunctionCount2++;
       }
       else if (j3Decide() == "stop") {
         subcondition = 0;
         Stop();
         delay(1000);
         depositcondition = 3;
-        return;
       }
 
     } else {
@@ -565,32 +602,37 @@ void j3Retrieve(){
         turning = true;
         if (subcondition == 1) {
           junctionLeft();
+          delay(500);
         }
         if (subcondition == 2) {
           junctionRight();
+          delay(500);
         }
-        delay(200);
-      } else if (turning) {
-        if ((backleft == 0) || (backright == 0)) {
+
+      } 
+      else if (turning) {
+        if ((frontleft == 0) || (frontright == 0)) {
           if (subcondition == 1) {
             junctionLeft();
           }
           if (subcondition == 2) {
             junctionRight();
           }
-        } else {
+        }
+         else {
           Stop();
-          delay(1000);
-          turning = false;
-          forwards();
           delay(500);
+          turning = false;
           if ((frontleft == 1) && (frontright == 0)) {
-            turnLeft();
-          } else if ((frontleft == 0) && (frontright == 1)) {
-            turnRight();
-          } else {
-            forwards();
-          }
+        turnLeft();
+      } else if ((frontleft == 0) && (frontright == 1)) {
+        turnRight();
+      } else if ((frontleft == 1) && (frontright == 1)) {
+        forwards();
+      }
+      else{
+        forwards();
+      }
           subcondition = 0;
           depositcondition = 1;
           rjunctionCount2++;
@@ -610,14 +652,15 @@ void j4Retrieve(){
       else if (j4Decide() == "straight") {
         subcondition = 0;
         forwards();
-        delay(1000);
+        delay(500);
+        depositcondition = 0;
+        rjunctionCount2++;
       }
       else if (j4Decide() == "stop") {
         subcondition = 0;
         Stop();
         delay(1000);
         depositcondition = 3;
-        return;
       }
 
     } else {
@@ -625,32 +668,37 @@ void j4Retrieve(){
         turning = true;
         if (subcondition == 1) {
           junctionLeft();
+          delay(500);
         }
         if (subcondition == 2) {
           junctionRight();
+          delay(500);
         }
-        delay(200);
-      } else if (turning) {
-        if ((backleft == 0) || (backright == 0)) {
+
+      } 
+      else if (turning) {
+        if ((frontleft == 0) || (frontright == 0)) {
           if (subcondition == 1) {
             junctionLeft();
           }
           if (subcondition == 2) {
             junctionRight();
           }
-        } else {
+        }
+         else {
           Stop();
-          delay(1000);
-          turning = false;
-          forwards();
           delay(500);
+          turning = false;
           if ((frontleft == 1) && (frontright == 0)) {
-            turnLeft();
-          } else if ((frontleft == 0) && (frontright == 1)) {
-            turnRight();
-          } else {
-            forwards();
-          }
+        turnLeft();
+      } else if ((frontleft == 0) && (frontright == 1)) {
+        turnRight();
+      } else if ((frontleft == 1) && (frontright == 1)) {
+        forwards();
+      }
+      else{
+        forwards();
+      }
           subcondition = 0;
           depositcondition = 1;
           rjunctionCount2++;
@@ -670,14 +718,15 @@ void j5Retrieve(){
       else if (j5Decide() == "straight") {
         subcondition = 0;
         forwards();
-        delay(1000);
+        delay(500);
+        depositcondition = 0;
+        rjunctionCount2++;
       }
       else if (j5Decide() == "stop") {
         subcondition = 0;
         Stop();
         delay(1000);
         depositcondition = 3;
-        return;
       }
 
     } else {
@@ -685,32 +734,37 @@ void j5Retrieve(){
         turning = true;
         if (subcondition == 1) {
           junctionLeft();
+          delay(500);
         }
         if (subcondition == 2) {
           junctionRight();
+          delay(500);
         }
-        delay(200);
-      } else if (turning) {
-        if ((backleft == 0) || (backright == 0)) {
+
+      } 
+      else if (turning) {
+        if ((frontleft == 0) || (frontright == 0)) {
           if (subcondition == 1) {
             junctionLeft();
           }
           if (subcondition == 2) {
             junctionRight();
           }
-        } else {
+        }
+         else {
           Stop();
-          delay(1000);
-          turning = false;
-          forwards();
           delay(500);
+          turning = false;
           if ((frontleft == 1) && (frontright == 0)) {
-            turnLeft();
-          } else if ((frontleft == 0) && (frontright == 1)) {
-            turnRight();
-          } else {
-            forwards();
-          }
+        turnLeft();
+      } else if ((frontleft == 0) && (frontright == 1)) {
+        turnRight();
+      } else if ((frontleft == 1) && (frontright == 1)) {
+        forwards();
+      }
+      else{
+        forwards();
+      }
           subcondition = 0;
           depositcondition = 1;
           rjunctionCount2++;
@@ -730,14 +784,15 @@ void j6Retrieve(){
       else if (j6Decide() == "straight") {
         subcondition = 0;
         forwards();
-        delay(1000);
+        delay(500);
+        depositcondition = 0;
+        rjunctionCount2++;
       }
       else if (j6Decide() == "stop") {
         subcondition = 0;
         Stop();
         delay(1000);
         depositcondition = 3;
-        return;
       }
 
     } else {
@@ -745,32 +800,37 @@ void j6Retrieve(){
         turning = true;
         if (subcondition == 1) {
           junctionLeft();
+          delay(500);
         }
         if (subcondition == 2) {
           junctionRight();
+          delay(500);
         }
-        delay(200);
-      } else if (turning) {
-        if ((backleft == 0) || (backright == 0)) {
+
+      } 
+      else if (turning) {
+        if ((frontleft == 0) || (frontright == 0)) {
           if (subcondition == 1) {
             junctionLeft();
           }
           if (subcondition == 2) {
             junctionRight();
           }
-        } else {
+        }
+         else {
           Stop();
-          delay(1000);
-          turning = false;
-          forwards();
           delay(500);
+          turning = false;
           if ((frontleft == 1) && (frontright == 0)) {
-            turnLeft();
-          } else if ((frontleft == 0) && (frontright == 1)) {
-            turnRight();
-          } else {
-            forwards();
-          }
+        turnLeft();
+      } else if ((frontleft == 0) && (frontright == 1)) {
+        turnRight();
+      } else if ((frontleft == 1) && (frontright == 1)) {
+        forwards();
+      }
+      else{
+        forwards();
+      }
           subcondition = 0;
           depositcondition = 1;
           rjunctionCount2++;
@@ -790,14 +850,15 @@ void j7Retrieve(){
       else if (j7Decide() == "straight") {
         subcondition = 0;
         forwards();
-        delay(1000);
+        delay(500);
+        depositcondition = 0;
+        rjunctionCount2++;
       }
       else if (j7Decide() == "stop") {
         subcondition = 0;
         Stop();
         delay(1000);
         depositcondition = 3;
-        return;
       }
 
     } else {
@@ -805,32 +866,37 @@ void j7Retrieve(){
         turning = true;
         if (subcondition == 1) {
           junctionLeft();
+          delay(500);
         }
         if (subcondition == 2) {
           junctionRight();
+          delay(500);
         }
-        delay(200);
-      } else if (turning) {
-        if ((backleft == 0) || (backright == 0)) {
+
+      } 
+      else if (turning) {
+        if ((frontleft == 0) || (frontright == 0)) {
           if (subcondition == 1) {
             junctionLeft();
           }
           if (subcondition == 2) {
             junctionRight();
           }
-        } else {
+        }
+         else {
           Stop();
-          delay(1000);
-          turning = false;
-          forwards();
           delay(500);
+          turning = false;
           if ((frontleft == 1) && (frontright == 0)) {
-            turnLeft();
-          } else if ((frontleft == 0) && (frontright == 1)) {
-            turnRight();
-          } else {
-            forwards();
-          }
+        turnLeft();
+      } else if ((frontleft == 0) && (frontright == 1)) {
+        turnRight();
+      } else if ((frontleft == 1) && (frontright == 1)) {
+        forwards();
+      }
+      else{
+        forwards();
+      }
           subcondition = 0;
           depositcondition = 1;
           rjunctionCount2++;
@@ -850,14 +916,15 @@ void j8Retrieve(){
       else if (j8Decide() == "straight") {
         subcondition = 0;
         forwards();
-        delay(1000);
+        delay(500);
+        depositcondition = 0;
+        rjunctionCount2++;
       }
       else if (j8Decide() == "stop") {
         subcondition = 0;
         Stop();
         delay(1000);
         depositcondition = 3;
-        return;
       }
 
     } else {
@@ -865,32 +932,37 @@ void j8Retrieve(){
         turning = true;
         if (subcondition == 1) {
           junctionLeft();
+          delay(500);
         }
         if (subcondition == 2) {
           junctionRight();
+          delay(500);
         }
-        delay(200);
-      } else if (turning) {
-        if ((backleft == 0) || (backright == 0)) {
+
+      } 
+      else if (turning) {
+        if ((frontleft == 0) || (frontright == 0)) {
           if (subcondition == 1) {
             junctionLeft();
           }
           if (subcondition == 2) {
             junctionRight();
           }
-        } else {
+        }
+         else {
           Stop();
-          delay(1000);
-          turning = false;
-          forwards();
           delay(500);
+          turning = false;
           if ((frontleft == 1) && (frontright == 0)) {
-            turnLeft();
-          } else if ((frontleft == 0) && (frontright == 1)) {
-            turnRight();
-          } else {
-            forwards();
-          }
+        turnLeft();
+      } else if ((frontleft == 0) && (frontright == 1)) {
+        turnRight();
+      } else if ((frontleft == 1) && (frontright == 1)) {
+        forwards();
+      }
+      else{
+        forwards();
+      }
           subcondition = 0;
           depositcondition = 1;
           rjunctionCount2++;
@@ -910,14 +982,15 @@ void j9Retrieve(){
       else if (j9Decide() == "straight") {
         subcondition = 0;
         forwards();
-        delay(1000);
+        delay(500);
+        depositcondition = 0;
+        rjunctionCount2++;
       }
       else if (j9Decide() == "stop") {
         subcondition = 0;
         Stop();
         delay(1000);
         depositcondition = 3;
-        return;
       }
 
     } else {
@@ -925,32 +998,37 @@ void j9Retrieve(){
         turning = true;
         if (subcondition == 1) {
           junctionLeft();
+          delay(500);
         }
         if (subcondition == 2) {
           junctionRight();
+          delay(500);
         }
-        delay(200);
-      } else if (turning) {
-        if ((backleft == 0) || (backright == 0)) {
+
+      } 
+      else if (turning) {
+        if ((frontleft == 0) || (frontright == 0)) {
           if (subcondition == 1) {
             junctionLeft();
           }
           if (subcondition == 2) {
             junctionRight();
           }
-        } else {
+        }
+         else {
           Stop();
-          delay(1000);
-          turning = false;
-          forwards();
           delay(500);
+          turning = false;
           if ((frontleft == 1) && (frontright == 0)) {
-            turnLeft();
-          } else if ((frontleft == 0) && (frontright == 1)) {
-            turnRight();
-          } else {
-            forwards();
-          }
+        turnLeft();
+      } else if ((frontleft == 0) && (frontright == 1)) {
+        turnRight();
+      } else if ((frontleft == 1) && (frontright == 1) ){
+        forwards();
+      }
+      else{
+        forwards();
+      }
           subcondition = 0;
           depositcondition = 1;
           rjunctionCount2++;
@@ -972,13 +1050,13 @@ void setup() {
   }
   Serial.println("Motor Shield found.");
 
-  // Wire.begin();
-  // sensor.setTimeout(500);
-  // if (!sensor.init())
-  // {
-  //   Serial.println("Failed to detect and initialize sensor!");
-  //   while (1) {}
-  // }
+  Wire.begin();
+  sensor.setTimeout(500);
+  if (!sensor.init())
+  {
+    Serial.println("Failed to detect and initialize sensor!");
+    while (1) {}
+  }
 
   // defining pin modes
   pinMode(L, INPUT); 
@@ -987,7 +1065,7 @@ void setup() {
   pinMode(F_L, INPUT);
 
   pinMode(led_B, OUTPUT);
-//  pinMode(led_G, OUTPUT);
+  pinMode(led_G, OUTPUT);
   pinMode(led_R, OUTPUT);
 
   //pinMode(pushGreen, INPUT);
@@ -1013,27 +1091,25 @@ void loop(){
   frontleft = digitalRead(F_L);
   frontright = digitalRead(F_R);
 
-  // distance = sensor.readRangeSingleMillimeters();
-  // Serial.println(distance);
+  distance = sensor.readRangeSingleMillimeters();
+  //Serial.println(distance);
   //Serial.println(backleft);
   //Serial.println(backright);
   
-  if ((leftSpeed > 0) || (rightSpeed > 0)) {
-    digitalWrite(led_B, ((millis() / 500) % 2));
+  if ((leftSpeed == 0) && (rightSpeed == 0)) {
+    digitalWrite(led_B, LOW);
   }
   else {
-    digitalWrite(led_B, LOW);
+    digitalWrite(led_B, ((millis() / 500) % 2));
   }
 
   if ((findCounter == 0) && (depositCounter == 0)){
     searchFirst();
-    //Serial.println("Search 1");
+    Serial.println("Search 1");
   }
   else if ((findCounter == 1) && (depositCounter == 0)){
     depositFirst();
     Serial.println("Deposit 1");
-
-
   }
   else if ((findCounter == 1) && (depositCounter == 1)){
     searchFirst();
@@ -1048,8 +1124,9 @@ void loop(){
 void searchFirst() {
   if (distance < 30) {
     forwards();
-    delay(500);
+    delay(200);
     Stop();
+    delay(1000);
     valMagnetic = digitalRead(inputMagneticPin);
     if(valMagnetic == HIGH){ // magnetic
       digitalWrite(led_R, HIGH); //Turn off led
@@ -1061,14 +1138,15 @@ void searchFirst() {
     
     // GREEN LED FOR NON-MAGNETIC
     else if(valMagnetic == LOW){ // not magnetic
-      digitalWrite(led_R, HIGH); //Turn off led
+      digitalWrite(led_G, HIGH); //Turn off led
       delay(5500); // needs to be 5 seconds
-      digitalWrite(led_R, LOW); //Turn on led
+      digitalWrite(led_G, LOW); //Turn on led
       delay(1000);// turn LED OFF
       magnetic = false;
     }
   findCounter++;
   rjunctionCount = junctionCount;
+  Serial.println(rjunctionCount);
   junctionCount = 0;
   return;
   }
@@ -1078,7 +1156,7 @@ void searchFirst() {
       Stop();
       delay(1000);
     } else {
-      //Serial.println("Line correcting");
+      Serial.println("Line correcting");
       if ((frontleft == 1) && (frontright == 0)) {
         turnLeft();
       } else if ((frontleft == 0) && (frontright == 1)) {
@@ -1105,38 +1183,20 @@ void searchFirst() {
         searchcondition = 0;
         junctionCount++;
       }
-    } else {
+    } 
+    else {
       if (!turning) {
         turning = true;
         if (subcondition == 1) {
           junctionLeft();
-          delay(500);
+          delay(700);
         }
         else if (subcondition == 2) {
           junctionRight();
-          delay(500);
+          delay(700);
         }
       } else if (turning) {
-        if ((frontleft == 1) && (frontright == 1)) {
-          Stop();
-          if ((frontleft == 1) && (frontright == 0)) {
-        turnLeft();
-      } else if ((frontleft == 0) && (frontright == 1)) {
-        turnRight();
-      } else if ((frontleft == 1) && (frontright == 1)) {
-        forwards();
-      }
-      else {
-        forwards();
-      }
-          forwards();
-          delay(200);
-          turning = false;
-          subcondition = 0;
-          searchcondition = 0;
-          junctionCount++;
-          
-        } else {
+        if ((frontleft == 0) || (frontright == 0)) {
           if (subcondition == 1) {
             junctionLeft();
           }
@@ -1144,12 +1204,32 @@ void searchFirst() {
             junctionRight();
           }
         }
+         else {
+          Stop();
+          forwards();
+          delay(500);
+          turning = false;
+          if ((frontleft == 1) && (frontright == 0)) {
+        turnLeft();
+      } else if ((frontleft == 0) && (frontright == 1)) {
+        turnRight();
+      } else if ((frontleft == 1) && (frontright == 1)) {
+        forwards();
+      }
+      else{
+        forwards();
+      }
+          subcondition = 0;
+          searchcondition = 0;
+          junctionCount++;
+        }
       }
     }
   }
 }
 
 void depositFirst() {
+
   if (depositcondition == 0) {
     switch (rjunctionCount) {
         case 0:
@@ -1190,13 +1270,17 @@ void depositFirst() {
       depositcondition = 2;
       Stop();
       delay(500);
-    } else {
+    } 
+    else {
       if ((frontleft == 1) && (frontright == 0)) {
         turnLeft();
       } else if ((frontleft == 0) && (frontright == 1)) {
         turnRight();
-      } else {
+      } else if ((frontleft == 1) && (frontright == 1)) {
         forwards();
+      }
+      else{
+        Stop(); // remember to change this
       }
     }
   }
@@ -1236,7 +1320,7 @@ void depositFirst() {
   }
   else if (depositcondition == 3) {
     forwards();
-    delay(750);
+    delay(1000);
     if (magnetic == true){
       rotate90R();
       forwards();
@@ -1302,6 +1386,5 @@ String junctionDecide(){
     // Reset junctionCount
     junctionCount = 0;
     return "straight";
-
-  }
+}
 }
