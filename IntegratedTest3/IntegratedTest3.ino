@@ -4,6 +4,7 @@
 // - Handle block at node 2
 // - Recalibrate block depositing
 // - Stopping after collecting second block sometimes
+// - When looking for the second grid block, don't search the same nodes twice
 
 /* 
 Node numbering for block retrieval (start heading towards node 2):
@@ -69,20 +70,23 @@ enum Direction { north, east, south, west };
 Direction current_direction;
 int current_node;
 cppQueue path(sizeof(int));
-enum Status { searching, retrieving }; // Either searching for a block or taking a block back
 enum BlockStatus { no_block=-1, non_magnetic=0, magnetic=1 };
-Status current_status;
 BlockStatus current_block_status;
-int number_of_blocks_retrieved = 0;
+int number_of_blocks_retrieved;
 
 enum Turn { left90=-1, straight=0, right90=1, turn180=2 };
 
 // Board constants
-const int ANTICLOCKWISE_PATH[10] = { 2, 3, 4, 9, 8, 7, 6, 5, 0, 1 };
-const int FIRST_RETRIEVAL_RETURN_PATH[10] = { 5, 2, -1, 2, 3, 6, 7, 5, 3, 4 };
+const int ANTICLOCKWISE_PATH[] = { 2, 3, 4, 9, 8, 7, 6, 5, 0, 1 };
+const int FIRST_RETRIEVAL_RETURN_PATH[] = { 5, 2, -1, 2, 3, 6, 7, 5, 3, 4 };
 /* The i^th element of the above array is the next node to travel to from node i
 on the return journey having just collected a block. This prevents crossing a
 node that hasn't already been crossed, which may contain the second block. */
+const int FREE_SPACE_SETUP_PATH[5] = { 2, 3, 4, 9, 14 }; 
+// Path from start to top right to begin searching free space
+const int FREE_SPACE_RETURN_PATH[5] = { 10, 5, 0, 1, 2 };
+// Path from top left back to start
+
 
 void panic() {
     stop();
@@ -92,6 +96,10 @@ void panic() {
     while (true) {
         delay(1000);
     }
+}
+
+int mod(int x, int y) {
+    return ((x%y)+y)%y;
 }
 
 void waitForButtonPress() {
@@ -194,7 +202,7 @@ Direction getDesiredDirection(int start_node, int end_node) {
         } else {
             return difference > 0 ? east : west;
         }
-    } else if ((start_node % 5) == (end_node % 5)) {
+    } else if (mod(start_node, 5) == mod(end_node, 5)) {
         int difference = (end_node / 5) - (start_node / 5);
         return difference > 0 ? north : south;
     } else {
@@ -205,7 +213,7 @@ Direction getDesiredDirection(int start_node, int end_node) {
 
 Turn getDesiredTurn(Direction start_direction, Direction end_direction) {
     /* Get the turn required to get from one compass direction to another */
-    int difference = ((end_direction - start_direction + 4) % 4 + 1) % 4 - 1; 
+    int difference = mod(end_direction - start_direction + 1,  4) - 1; 
     // -1, 0, 1, 2 --> 90L, none, 90R, 180
     return Turn(difference);
 }
@@ -269,6 +277,7 @@ void makeTurn(Turn turn) {
             spinRight();
             break;
     }
+    delay(500);
     turnUntilNextLine();
     if (turn == turn180) {
         turnUntilNextLine();
@@ -289,16 +298,19 @@ void handleJunction() {
     Direction desired_direction;
 
     if (path.isEmpty()) {
-        if ((current_status == retrieving) && ((current_node == 2) || (current_node == -1))) {
-            if (current_node == 2) {
-                desired_direction = south;
-                int next_node = -1;
-                path.push(&next_node);
-            } else {
-                stop();
-                depositBlock();
-                return; // TODO: Don't like the structure of this
-            }
+        Serial.print("Path empty. Handling behaviour for node ");
+        Serial.println(current_node);
+        if (current_node == -1) {
+            Serial.println("Case -1");
+            desired_direction = south;
+        } else if (current_node == 2) {
+            Serial.println("Case 2");
+            desired_direction = south;
+            int next_node = -1;
+            path.push(&next_node);
+        } else if (current_node == 14) {
+            Serial.println("Case 14");
+            desired_direction = west;
         } else {
             Serial.println("No path set and not retrieving at node 2");
             panic();
@@ -327,12 +339,9 @@ void handleJunction() {
 
     makeTurn(desired_turn);
     current_direction = desired_direction;
-    goForwards();
-    delay(500);
 }
 
 void handleBlockFound() {
-    current_status = retrieving;
     goForwards();
     delay(300);
     stop();
@@ -355,7 +364,7 @@ void handleBlockFound() {
         delay(1000);
     }
     rotate180();
-    current_direction = (current_direction + 2) % 4;
+    current_direction = mod(current_direction + 2, 4);
     setReturnPath();
     goForwards();
     delay(500); /* Increasing this delay should help the post-block confusion
@@ -408,23 +417,40 @@ void depositBlock() {
     delay(5000);
     goForwards();
     delay(200);
-    
     number_of_blocks_retrieved++;
     current_block_status = no_block;
     current_direction = north;
     current_node = -1;
-
     if (number_of_blocks_retrieved < 2){
-        current_status = searching;
         for (int n : ANTICLOCKWISE_PATH) {
             path.push(&n);
         }
-        goForwards();
-        delay(2000);
     } else {
-        digitalWrite(led_B, HIGH);
-        delay(5500);
-        panic();
+        if (number_of_blocks_retrieved == 2) {
+            digitalWrite(led_B, HIGH);
+            delay(5500);
+            digitalWrite(led_B, LOW);
+        }
+        for (int n : FREE_SPACE_SETUP_PATH) {
+            path.push(&n);
+        }
+    }
+    goForwards();
+    delay(2000);
+}
+
+void freeSearch() {
+    while (!detectJunction()) {
+        updateLineSensorReadings();
+        updateUltrasoundReading();
+        if (ultrasound_distance < 100) {
+            panic();
+        }
+    }
+    
+    current_node = 11;
+    for (int n : FREE_SPACE_RETURN_PATH) {
+        path.push(&n);
     }
 }
 
@@ -462,17 +488,17 @@ void setup() {
     waitForButtonPress();
 
     // Initial state of robot
-    current_node = -1;
+    number_of_blocks_retrieved = 2;
+    current_node = 9;
     current_direction = north;
-    int new_path[] = ANTICLOCKWISE_PATH;
+    int new_path[] = { 14 };
     for (int n : new_path) {
         path.push(&n);
     }
-    current_status = searching;
     current_block_status = no_block;
 
     goForwards();
-    delay(3000);
+    // delay(3000);
 }
 
 void loop(){
@@ -486,17 +512,24 @@ void loop(){
         goForwards();
     }
 
-    digitalWrite(led_B, ((millis() / 500) % 2));
+    digitalWrite(led_B, mod((millis() / 500), 2));
 
     // Update sensors
     updateLineSensorReadings();
     tof_distance = tof_sensor.readRangeSingleMillimeters();
     val_magnetic_sensor = digitalRead(magnetic_sensor_pin);
 
-    if ((current_status == searching) && ((tof_distance < 30))) {
+    if (tof_distance < 30) {
         handleBlockFound();
     } else if (detectJunction()) {
         handleJunction();
+        goForwards();
+        delay(300);
+        if (current_node == -1) {
+            depositBlock();
+        } else if (current_node == 14) {
+            freeSearch();
+        }
     } else {
         lineFollow();
     }
