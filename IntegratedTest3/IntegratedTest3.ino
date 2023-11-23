@@ -1,4 +1,10 @@
 // Code for search and retrieval of first two blocks
+
+// TODO: 
+// - Handle block at node 2
+// - Recalibrate block depositing
+// - Stopping after collecting second block sometimes
+
 /* 
 Node numbering for block retrieval (start heading towards node 2):
 
@@ -18,11 +24,7 @@ W-|-E  3-|-1
 #include "VL53L0X.h"
 #include <cppQueue.h>
 
-// Time of Flight (ToF) sensor
-VL53L0X tof_sensor; 
-uint16_t tof_distance = 0;
-
-
+// Setup motors
 Adafruit_MotorShield AFMS = Adafruit_MotorShield();
 Adafruit_DCMotor *left_motor= AFMS.getMotor(3); //left motor
 Adafruit_DCMotor *right_motor = AFMS.getMotor(4); // right motor
@@ -31,16 +33,22 @@ int right_speed;
 // const float MOTOR_SPEED_FACTOR[2] = { 1, 0.88 };
 const float MOTOR_SPEED_FACTOR[2] = { 1, 1 };
 
+// Time of Flight (ToF) sensor
+VL53L0X tof_sensor; 
+uint16_t tof_distance = 0;
+
+
+// Ultrasonic sensor
 #define MAX_RANG  (520)//the max measurement value of the module is 520cm(a little bit longer than effective max range)
 #define ADC_SOLUTION  (1023.0)//ADC accuracy of Arduino UNO is 10bit 
+int ultrasound_pin = A3;
+float ultrasound_distance, ultrasound_sensity;
+
 
 // Line sensors
 const int LINE_SENSOR_PINS[4] = { 6, 8, 9, 7 }; // [BL, FL, FR, BR]
 int line_sensor_readings[4]; // [BL, FL, FR, BR]
 
-//ultrasonic sensor
-int sensityPin = A3;
-float dist, sensity;
 
 // LEDs
 const int led_R = 5; // red LED
@@ -87,16 +95,24 @@ void panic() {
 }
 
 void waitForButtonPress() {
+    Serial.print("Waiting for button press... ");
     do {
         val_green_button = digitalRead(green_button_pin);
     } while (val_green_button == LOW);
+    Serial.println("Done");
+    delay(500);
 }
 
-int updateLineSensorReadings() {
+void updateLineSensorReadings() {
     for (int i = 0; i < 4; i++) 
     {
         line_sensor_readings[i] = digitalRead(LINE_SENSOR_PINS[i]);
     }
+}
+
+void updateUltrasoundReading() {
+    ultrasound_sensity = analogRead(ultrasound_pin);
+    ultrasound_distance = ultrasound_sensity * MAX_RANG / ADC_SOLUTION;
 }
 
 void printLineSensorReadings() {
@@ -235,6 +251,7 @@ void turnUntilNextLine() {
 
     Serial.print("Next line hit. LSRs: ");
     printLineSensorReadings();
+    delay(100);
 }
 
 void makeTurn(Turn turn) {
@@ -252,7 +269,6 @@ void makeTurn(Turn turn) {
             spinRight();
             break;
     }
-    delay(700);
     turnUntilNextLine();
     if (turn == turn180) {
         turnUntilNextLine();
@@ -260,6 +276,11 @@ void makeTurn(Turn turn) {
 }
 
 void handleJunction() {
+    stop();
+    delay(500);
+    goForwards();
+    delay(50);
+    stop();
     Serial.println("Junction detected");
     Serial.print("LSRs at junction: ");
     printLineSensorReadings();
@@ -352,6 +373,9 @@ void setReturnPath() {
         next_node = FIRST_RETRIEVAL_RETURN_PATH[next_node];
         path.push(&next_node);
     }
+    if (path.isEmpty()) {
+        panic();
+    }
 }
 
 void depositBlock() {
@@ -437,9 +461,11 @@ void setup() {
     pinMode(green_button_pin, INPUT);
     waitForButtonPress();
 
+    // Initial state of robot
     current_node = -1;
     current_direction = north;
-    for (int n : ANTICLOCKWISE_PATH) {
+    int new_path[] = ANTICLOCKWISE_PATH;
+    for (int n : new_path) {
         path.push(&n);
     }
     current_status = searching;
