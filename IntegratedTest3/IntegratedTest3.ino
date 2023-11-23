@@ -260,8 +260,6 @@ void makeTurn(Turn turn) {
 }
 
 void handleJunction() {
-    stop();
-    delay(500);
     Serial.println("Junction detected");
     Serial.print("LSRs at junction: ");
     printLineSensorReadings();
@@ -276,6 +274,7 @@ void handleJunction() {
                 int next_node = -1;
                 path.push(&next_node);
             } else {
+                stop();
                 depositBlock();
                 return; // TODO: Don't like the structure of this
             }
@@ -382,6 +381,8 @@ void depositBlock() {
         rotate90L();
     }
     stop();
+    delay(5000);
+    goForwards();
     delay(200);
     
     number_of_blocks_retrieved++;
@@ -445,7 +446,7 @@ void setup() {
     current_block_status = no_block;
 
     goForwards();
-    delay(2000);
+    delay(3000);
 }
 
 void loop(){
