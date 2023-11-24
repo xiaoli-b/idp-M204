@@ -118,9 +118,17 @@ void updateLineSensorReadings() {
     }
 }
 
+void updateTOFReading() {
+    tof_distance = tof_sensor.readRangeSingleMillimeters();
+}
+
 void updateUltrasoundReading() {
     ultrasound_sensity = analogRead(ultrasound_pin);
     ultrasound_distance = ultrasound_sensity * MAX_RANG / ADC_SOLUTION;
+}
+
+void updateMagneticSensorReading() {
+    val_magnetic_sensor = digitalRead(magnetic_sensor_pin);
 }
 
 void printLineSensorReadings() {
@@ -349,6 +357,7 @@ void turnToDesiredDirection(Direction desired_direction) {
 }
 
 void handleBlockFound() {
+    /* Detect block type and set LEDs and variables accordingly */
     goForwards();
     delay(300);
     stop();
@@ -370,7 +379,10 @@ void handleBlockFound() {
         digitalWrite(led_G, LOW);
         delay(1000);
     }
-    
+}
+
+void handleGridBlockFound() {
+    handleBlockFound();
     setReturnPath();
     rotate180();
     current_direction = mod(current_direction + 2, 4);
@@ -457,12 +469,24 @@ void freeSearch() {
     }
 
     getFreeSpaceBlock();
-    turnToDesiredDirection(west);
+
+    current_direction = north;
     
-    current_node = 11;
-    for (int n : FREE_SPACE_RETURN_PATH) {
-        path.push(&n);
+    if (current_block_status == no_block) {
+        turnToDesiredDirection(east);
+        current_node = 13;
+        int new_path[] = { 14 };
+        for (int n : new_path) {
+            path.push(&n);
+        }
+    } else {
+        turnToDesiredDirection(west);
+        current_node = 11;
+        for (int n : FREE_SPACE_RETURN_PATH) {
+            path.push(&n);
+        }
     }
+
 }
 
 bool driveAroundFreeSpaceLookingForBlock() {
@@ -543,7 +567,45 @@ void getFreeSpaceBlock() {
     /* Having detected a block in the free space, turn left, grab it, and return to the top 
     line (facing north) ready for block retrieval */
     rotate90L();
+    goForwards();
+    bool block_found = false;
+    while (true) {
+        updateTOFReading();
+        updateLineSensorReadings();
 
+        if (tof_distance < 30) {
+            block_found = true;
+            break;
+        }
+
+        if (detectJunction()) {
+            break;
+        }
+    }
+
+    if (block_found) {
+        handleBlockFound();
+        if (current_node == 14) {
+            rotate180();
+        }
+        goForwards();
+        while (!detectJunction()) {
+            updateLineSensorReadings();
+        } // TODO: Similar code to below.
+    } else {
+        // We missed the block. Go back to the top line so we can path follow to 14 and start
+        // the loop again.
+        if (current_node == 14) {
+            // We started from the top line. We're now at the bottom of the free space and 
+            // need to turn around and go back to the top.
+            rotate180();
+            goForwards();
+            while (!detectJunction()) {
+                updateLineSensorReadings();
+            }
+        }
+
+    }
 }
 
 void updateFlashingLED() {
@@ -612,11 +674,10 @@ void loop(){
 
     // Update sensors
     updateLineSensorReadings();
-    tof_distance = tof_sensor.readRangeSingleMillimeters();
-    val_magnetic_sensor = digitalRead(magnetic_sensor_pin);
+    updateTOFReading();
 
     if ((current_block_status == no_block) && (tof_distance < 30)) {
-        handleBlockFound();
+        handleGridBlockFound();
     } else if (detectJunction()) {
         handleJunction();
         goForwards();
