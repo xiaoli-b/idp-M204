@@ -446,6 +446,7 @@ void freeSearch() {
         if (ultrasound_distance < 100) {
             panic();
         }
+        lineFollow();
     }
     
     current_node = 11;
