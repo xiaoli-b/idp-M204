@@ -78,7 +78,7 @@ enum Turn { left90=-1, straight=0, right90=1, turn180=2 };
 
 // Board constants
 const int ANTICLOCKWISE_PATH[] = { 2, 3, 4, 9, 8, 7, 6, 5, 0, 1 };
-const int FIRST_RETRIEVAL_RETURN_PATH[] = { 5, 2, -1, 2, 3, 6, 7, 5, 3, 4 };
+const int FIRST_RETRIEVAL_RETURN_PATH[] = { 5, 2, -1, 2, 3, 6, 7, 2, 3, 4 };
 /* The i^th element of the above array is the next node to travel to from node i
 on the return journey having just collected a block. This prevents crossing a
 node that hasn't already been crossed, which may contain the second block. */
@@ -168,7 +168,8 @@ void stop(){
 
 void rotate180() {
     setMotors(-150, 150);
-    delay(2950);
+    delay(2200);
+    turnUntilNextLine();
     stop();
 }
 
@@ -263,12 +264,15 @@ void turnUntilNextLine() {
 }
 
 void makeTurn(Turn turn) {
+    goForwards();
+    delay(50);
+    stop();
+
     switch (turn) {
         case left90:
             spinLeft();
             break;
         case straight:
-            goForwards();
             return;
         case right90:
             spinRight();
@@ -287,9 +291,6 @@ void makeTurn(Turn turn) {
 void handleJunction() {
     stop();
     delay(500);
-    goForwards();
-    delay(50);
-    stop();
     Serial.println("Junction detected");
     Serial.print("LSRs at junction: ");
     printLineSensorReadings();
@@ -328,6 +329,10 @@ void handleJunction() {
         desired_direction = getDesiredDirection(current_node, next_node);
     }
 
+    turnToDesiredDirection(desired_direction);
+}
+
+void turnToDesiredDirection(Direction desired_direction) {
     Turn desired_turn = getDesiredTurn(current_direction, desired_direction);
 
     Serial.print("Direction change: ");
@@ -440,19 +445,44 @@ void depositBlock() {
 }
 
 void freeSearch() {
+    /* Starts at junction 10 */
+    if (current_node != 10) {
+        panic();
+    }
+    turnToDesiredDirection(west);
+
+    bool block_detected = false;
     while (!detectJunction()) {
         updateLineSensorReadings();
+        updateFlashingLED();
         updateUltrasoundReading();
-        if (ultrasound_distance < 100) {
-            panic();
+
+        if (ultrasound_distance < 60) {
+            block_detected = true;
+            break;
         }
+
         lineFollow();
     }
+
+    if (block_detected) {
+        getFreeSpaceBlock();
+    }
+
     
     current_node = 11;
     for (int n : FREE_SPACE_RETURN_PATH) {
         path.push(&n);
     }
+}
+
+void getFreeSpaceBlock() {
+    /* Having detected a block in the free space, grab it and return to the top 
+    line ready for block retrieval */
+}
+
+void updateFlashingLED() {
+    digitalWrite(led_B, mod((millis() / 500), 2));
 }
 
 void setup() {
@@ -489,17 +519,17 @@ void setup() {
     waitForButtonPress();
 
     // Initial state of robot
-    number_of_blocks_retrieved = 2;
-    current_node = 9;
+    number_of_blocks_retrieved = 0;
+    current_node = -1;
     current_direction = north;
-    int new_path[] = { 14 };
-    for (int n : new_path) {
+    // int new_path[] = { 14 };
+    for (int n : ANTICLOCKWISE_PATH) {
         path.push(&n);
     }
     current_block_status = no_block;
 
     goForwards();
-    // delay(3000);
+    delay(3000);
 }
 
 void loop(){
@@ -513,14 +543,14 @@ void loop(){
         goForwards();
     }
 
-    digitalWrite(led_B, mod((millis() / 500), 2));
+    updateFlashingLED();
 
     // Update sensors
     updateLineSensorReadings();
     tof_distance = tof_sensor.readRangeSingleMillimeters();
     val_magnetic_sensor = digitalRead(magnetic_sensor_pin);
 
-    if (tof_distance < 30) {
+    if ((current_block_status == no_block) && (tof_distance < 30)) {
         handleBlockFound();
     } else if (detectJunction()) {
         handleJunction();
