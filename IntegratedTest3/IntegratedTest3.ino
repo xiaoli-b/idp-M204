@@ -167,21 +167,23 @@ void stop(){
 }
 
 void rotate180() {
-    setMotors(-150, 150);
-    delay(2200);
+    setMotors(150, -150);
+    delay(2750);
     turnUntilNextLine();
+    delay(100);
     stop();
 }
 
 void rotate90R() {
     setMotors(150, -150);
-    delay(2040);
+    delay(2100);
     stop();
 }
 
 void rotate90L() {
+    // Could use side sensors rather than timing
     setMotors(-150, 150);
-    delay(2040);
+    delay(1950);
     stop();
 }
 
@@ -281,7 +283,7 @@ void makeTurn(Turn turn) {
             spinRight();
             break;
     }
-    delay(500);
+    delay(750);
     turnUntilNextLine();
     if (turn == turn180) {
         turnUntilNextLine();
@@ -368,9 +370,10 @@ void handleBlockFound() {
         digitalWrite(led_G, LOW);
         delay(1000);
     }
+    
+    setReturnPath();
     rotate180();
     current_direction = mod(current_direction + 2, 4);
-    setReturnPath();
     goForwards();
     delay(500); /* Increasing this delay should help the post-block confusion
     but will cause issues if the 180 turn isn't perfect */
@@ -410,7 +413,7 @@ void depositBlock() {
     stop();
     delay(1000);
     goBackwards();
-    delay(7700);
+    delay(8200);
     stop();
     delay(500);
     if (current_block_status == magnetic) {
@@ -445,13 +448,32 @@ void depositBlock() {
 }
 
 void freeSearch() {
-    /* Starts at junction 10 */
-    if (current_node != 10) {
+    /* Starts at junction 14 */
+
+    bool block_detected = false;
+    // Drive around free space until a block is detected
+    while (!block_detected) {
+        block_detected = driveAroundFreeSpaceLookingForBlock();
+    }
+
+    getFreeSpaceBlock();
+    turnToDesiredDirection(west);
+    
+    current_node = 11;
+    for (int n : FREE_SPACE_RETURN_PATH) {
+        path.push(&n);
+    }
+}
+
+bool driveAroundFreeSpaceLookingForBlock() {
+    // TODO: Lots of hard-coding here that I'm not sure I like
+    bool block_detected = false;
+    if (current_node != 14) {
         panic();
     }
     turnToDesiredDirection(west);
 
-    bool block_detected = false;
+    // Drive 14-->10 checking for block
     while (!detectJunction()) {
         updateLineSensorReadings();
         updateFlashingLED();
@@ -464,21 +486,64 @@ void freeSearch() {
 
         lineFollow();
     }
+    if (block_detected) {
+        return true;
+    }
+    current_node = 10;
+    turnToDesiredDirection(south);
+
+    // Drive 10-->5
+    while (!detectJunction()) {
+        updateLineSensorReadings();
+        updateFlashingLED();
+        lineFollow();
+    }
+    current_node = 5;
+    turnToDesiredDirection(east);
+
+    int junction_count = 0; // Rather than path following, hard-code to go past three junctions
+    // to get to 9 from 5
+
+    // Drive 5-->9 checking for block
+    while (junction_count < 4) {
+        updateLineSensorReadings();
+        updateFlashingLED();
+        updateUltrasoundReading();
+
+        if (detectJunction()) {
+            current_node++;
+            junction_count++;
+        }
+
+        if (ultrasound_distance < 60) {
+            block_detected = true;
+            break;
+        }
+
+        lineFollow();
+    }
 
     if (block_detected) {
-        getFreeSpaceBlock();
+        return true;
     }
 
-    
-    current_node = 11;
-    for (int n : FREE_SPACE_RETURN_PATH) {
-        path.push(&n);
+    turnToDesiredDirection(north);
+
+    // Drive 9-->14
+    while (!detectJunction()) {
+        updateLineSensorReadings();
+        updateFlashingLED();
+        lineFollow();
     }
+    current_node = 14;
+    return false;
 }
 
 void getFreeSpaceBlock() {
-    /* Having detected a block in the free space, grab it and return to the top 
-    line ready for block retrieval */
+    /* Having detected a block in the free space, turn left, grab it, and return to the top 
+    line (facing north) ready for block retrieval */
+    rotate90L();
+
 }
 
 void updateFlashingLED() {
