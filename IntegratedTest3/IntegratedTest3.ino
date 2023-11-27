@@ -195,6 +195,60 @@ void rotate90L() {
     stop();
 }
 
+void rotateOnLine(Turn turn) {
+    if (turn == straight) {
+        return;
+    } else if (turn == turn180) {
+        spinRight();
+        turnUntilNextLine();
+    } else {
+        if (turn == left90) {
+            spinLeft();
+        } else {
+            spinRight();
+        }
+        delay(750);
+        while (!line_sensor_readings[0] || !line_sensor_readings[3]) {
+            updateLineSensorReadings();
+        }
+        stop();
+        return;
+        if (!line_sensor_readings[0] || !line_sensor_readings[3]) {
+            // Both sensors didn't hit the line at the same time
+            if (!line_sensor_readings[0]) {
+                // Right sensor hit the line first
+                if (turn == left90) {
+                    setMotors(-100, 0);
+                } else {
+                    setMotors(100, 0);
+                }
+                while (!line_sensor_readings[0]) {
+                    // Turn until left sensor hits line
+                    updateLineSensorReadings();
+                    if (!line_sensor_readings[3]) {
+                        panic();
+                    }
+                }
+            } else {
+                // Left sensor hit the line first
+                if (turn == left90) {
+                    setMotors(0, 100);
+                } else {
+                    setMotors(0, -100);
+                }
+                while (!line_sensor_readings[3]) {
+                    // Turn until right sensor hits line
+                    updateLineSensorReadings();
+                    if (!line_sensor_readings[0]) {
+                        panic();
+                    }
+                }
+            }
+            stop();
+        }
+    }
+}
+
 bool detectJunction(){
     /* Are we currently at a junction */
     
@@ -240,6 +294,16 @@ void lineFollow() {
         turnRight();
     } else {
         goForwards();
+    }
+}
+
+void lineFollowForTime(int time_ms) {
+    unsigned long start_time = millis();
+    unsigned long end_time = start_time;
+    while ((end_time - start_time) < time_ms) {
+        updateLineSensorReadings();
+        lineFollow();
+        end_time = millis();
     }
 }
 
@@ -340,6 +404,8 @@ void handleJunction() {
     }
 
     turnToDesiredDirection(desired_direction);
+    goForwards();
+    delay(300);
 }
 
 void turnToDesiredDirection(Direction desired_direction) {
@@ -467,7 +533,6 @@ void freeSearch() {
     while (!block_detected) {
         block_detected = driveAroundFreeSpaceLookingForBlock();
     }
-
     getFreeSpaceBlock();
 
     current_direction = north;
@@ -495,7 +560,10 @@ bool driveAroundFreeSpaceLookingForBlock() {
     if (current_node != 14) {
         panic();
     }
-    turnToDesiredDirection(west);
+    if (current_direction != west) {
+        turnToDesiredDirection(west);
+    }
+    lineFollowForTime(2000);
 
     // Drive 14-->10 checking for block
     while (!detectJunction()) {
@@ -566,7 +634,7 @@ bool driveAroundFreeSpaceLookingForBlock() {
 void getFreeSpaceBlock() {
     /* Having detected a block in the free space, turn left, grab it, and return to the top 
     line (facing north) ready for block retrieval */
-    rotate90L();
+    rotateOnLine(left90);
     goForwards();
     bool block_found = false;
     while (true) {
@@ -646,17 +714,17 @@ void setup() {
     waitForButtonPress();
 
     // Initial state of robot
-    number_of_blocks_retrieved = 0;
-    current_node = -1;
+    number_of_blocks_retrieved = 2;
+    current_node = 9;
     current_direction = north;
-    // int new_path[] = { 14 };
-    for (int n : ANTICLOCKWISE_PATH) {
+    int new_path[] = { 14 };
+    for (int n : new_path) {
         path.push(&n);
     }
     current_block_status = no_block;
 
     goForwards();
-    delay(3000);
+    // delay(3000);
 }
 
 void loop(){
@@ -680,8 +748,6 @@ void loop(){
         handleGridBlockFound();
     } else if (detectJunction()) {
         handleJunction();
-        goForwards();
-        delay(300);
         if (current_node == -1) {
             depositBlock();
         } else if (current_node == 14) {
