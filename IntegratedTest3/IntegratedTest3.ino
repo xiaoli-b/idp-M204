@@ -375,14 +375,9 @@ void handleJunction() {
     if (path.isEmpty()) {
         Serial.print("Path empty. Handling behaviour for node ");
         Serial.println(current_node);
-        if (current_node == -1) {
-            Serial.println("Case -1");
-            desired_direction = south;
-        } else if (current_node == 2) {
+        if (current_node == 2) {
             Serial.println("Case 2");
             desired_direction = south;
-            int next_node = -1;
-            path.push(&next_node);
         } else if (current_node == 14) {
             Serial.println("Case 14");
             desired_direction = west;
@@ -748,10 +743,13 @@ void loop(){
         handleGridBlockFound();
     } else if (detectJunction()) {
         handleJunction();
-        if (current_node == -1) {
-            depositBlock();
-        } else if (current_node == 14) {
-            freeSearch();
+        if (path.isEmpty()) {
+            if (current_node == 2) {
+                lineFollowForTime(1000);
+                depositBlock();
+            } else if (current_node == 14) {
+                freeSearch();
+            }
         }
     } else {
         lineFollow();
