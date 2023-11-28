@@ -617,7 +617,7 @@ bool driveAroundFreeSpaceLookingForBlock() {
         updateFlashingLED();
         updateUltrasoundReading();
 
-        if (ultrasound_distance < 60) {
+        if (ultrasound_distance < 45) {
             block_detected = true;
             break;
         }
@@ -656,7 +656,7 @@ bool driveAroundFreeSpaceLookingForBlock() {
             lineFollowForTime(500);
         }
 
-        if (ultrasound_distance < 60) {
+        if (ultrasound_distance < 45) {
             block_detected = true;
             break;
         }
@@ -683,7 +683,7 @@ bool driveAroundFreeSpaceLookingForBlock() {
 
 int getFreeSpaceTurnDelay() {
     float actual_distance = ultrasound_distance + 10;
-    float required_delay = (actual_distance - 80) * (300/25);
+    float required_delay = (actual_distance - 50) * 50;
     int required_delay_rounded = (int) required_delay;
     return required_delay_rounded;
 
@@ -693,7 +693,7 @@ void getFreeSpaceBlock() {
     /* Having detected a block in the free space, turn left, grab it, and return to the top 
     line (facing north) ready for block retrieval */
     stop();
-    delay(100);
+    delay(500);
     int forwards_time = getFreeSpaceTurnDelay();
     if (forwards_time < 0) {
         goBackwards();
@@ -797,11 +797,11 @@ void setup() {
     waitForButtonPress();
 
     // Initial state of robot
-    number_of_blocks_retrieved = 2;
-    current_node = 9;
+    number_of_blocks_retrieved = 0;
+    current_node = -1;
     current_direction = north;
-    int new_path[] = { 14 };
-    for (int n : new_path) {
+    // int new_path[] = { 14 };
+    for (int n : ANTICLOCKWISE_PATH) {
         path.push(&n);
     }
     current_block_status = no_block;
