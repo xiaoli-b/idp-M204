@@ -369,7 +369,6 @@ void makeTurn(Turn turn) {
 
 void handleJunction() {
     stop();
-    delay(500);
     Serial.println("Junction detected");
     Serial.print("LSRs at junction: ");
     printLineSensorReadings();
@@ -430,7 +429,6 @@ void handleBlockFound() {
     stop();
     delay(500);
     val_magnetic_sensor = digitalRead(magnetic_sensor_pin);
-    delay(500);
     if (val_magnetic_sensor == HIGH) {
         // Detected magnetic block
         current_block_status = magnetic;
@@ -755,11 +753,11 @@ void setup() {
     waitForButtonPress();
 
     // Initial state of robot
-    number_of_blocks_retrieved = 2;
-    current_node = 9;
+    number_of_blocks_retrieved = 0;
+    current_node = -1;
     current_direction = north;
-    int new_path[] = { 14 };
-    for (int n : new_path) {
+    // int new_path[] = { 14 };
+    for (int n : ANTICLOCKWISE_PATH) {
         path.push(&n);
     }
     current_block_status = no_block;
