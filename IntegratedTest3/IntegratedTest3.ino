@@ -1,12 +1,9 @@
-// Code for search and retrieval of first two blocks
+// IDP M204 robot control program
 
-// TODO: 
-// - Handle block at node 2
-// - Recalibrate block depositing
-// - Stopping after collecting second block sometimes
+// TODO:
 // - When looking for the second grid block, don't search the same nodes twice
 
-/* 
+/*
 Node numbering for block retrieval (start heading towards node 2):
 
     10---------14
@@ -40,21 +37,18 @@ int right_speed;
 const float MOTOR_SPEED_FACTOR[2] = { 1, 1 };
 
 // Time of Flight (ToF) sensor
-VL53L0X tof_sensor; 
+VL53L0X tof_sensor;
 uint16_t tof_distance = 0;
-
 
 // Ultrasonic sensor
 #define MAX_RANG  (520)//the max measurement value of the module is 520cm(a little bit longer than effective max range)
-#define ADC_SOLUTION  (1023.0)//ADC accuracy of Arduino UNO is 10bit 
+#define ADC_SOLUTION  (1023.0)//ADC accuracy of Arduino UNO is 10bit
 int ultrasound_pin = A3;
 float ultrasound_distance, ultrasound_sensity;
-
 
 // Line sensors
 const int LINE_SENSOR_PINS[4] = { 6, 8, 9, 7 }; // [BL, FL, FR, BR]
 int line_sensor_readings[4]; // [BL, FL, FR, BR]
-
 
 // LEDs
 const int led_R = 5; // red LED
@@ -68,7 +62,6 @@ int val_magnetic_sensor; // variable for reading the pin status
 // Push buttons
 const int green_button_pin = 2; // push button pin
 int val_green_button;
-
 
 // Robot attributes
 enum Direction { north, east, south, west };
@@ -90,11 +83,10 @@ node that hasn't already been crossed, which may contain the second block. */
 const int FIRST_RETRIEVAL_RETURN_PATH[] = { 5, 2, -1, 2, 3, 6, 7, 2, 3, 4 };
 
 /* Path from start to top right to begin searching free space */
-const int FREE_SPACE_SETUP_PATH[5] = { 2, 3, 4, 9, 14 }; 
+const int FREE_SPACE_SETUP_PATH[5] = { 2, 3, 4, 9, 14 };
 
 /* Path from top left back to start */
 const int FREE_SPACE_RETURN_PATH[5] = { 10, 5, 0, 1, 2 };
-
 
 void panic() {
     stop();
@@ -160,7 +152,7 @@ void goForwards(){
 }
 
 void goBackwards(){
-    setMotors(-145, -160);
+    setMotors(-145, -157);
 }
 void spinRight(){
     setMotors(155, -150);
@@ -265,7 +257,7 @@ void rotate90L() {
 
 bool detectJunction(){
     /* Are we currently at a junction */
-    
+
     return ((line_sensor_readings[0]==1) || (line_sensor_readings[3]==1));
 }
 
@@ -292,7 +284,7 @@ Direction getDesiredDirection(int start_node, int end_node) {
 
 Turn getDesiredTurn(Direction start_direction, Direction end_direction) {
     /* Get the turn required to get from one compass direction to another */
-    int difference = mod(end_direction - start_direction + 1,  4) - 1; 
+    int difference = mod(end_direction - start_direction + 1,  4) - 1;
     // -1, 0, 1, 2 --> 90L, none, 90R, 180
     return Turn(difference);
 }
@@ -403,7 +395,6 @@ void handleJunction() {
             }
             handleJunction(); // This is not nice
             return;
-            
         } else {
             Serial.println("No path set and not retrieving at node 2");
             panic();
@@ -505,6 +496,7 @@ void depositBlock() {
     lineFollowForTime(750);
     while(!detectJunction()) {
         updateLineSensorReadings();
+        updateFlashingLED();
         lineFollow();
     }
     turnToDesiredDirection(south);
@@ -529,6 +521,7 @@ void depositBlock() {
 
     while(!detectJunction()) {
         updateLineSensorReadings();
+        updateFlashingLED();
         lineFollow();
     }
     if (current_block_status == magnetic) {
@@ -539,6 +532,7 @@ void depositBlock() {
     lineFollowForTime(500);
     while(!detectJunction()) {
       updateLineSensorReadings();
+      updateFlashingLED();
       lineFollow();
     }
     turnToDesiredDirection(north);
@@ -556,7 +550,8 @@ void depositBlock() {
     if (number_of_blocks_retrieved == 1) {
         lineFollowForTime(1000);
         goBackwards();
-        delay(1500);
+        delay(2750);
+        stop();
         digitalWrite(led_B, HIGH);
         delay(5500);
         digitalWrite(led_B, LOW);
@@ -686,10 +681,30 @@ bool driveAroundFreeSpaceLookingForBlock() {
     return false;
 }
 
+int getFreeSpaceTurnDelay() {
+    float actual_distance = ultrasound_distance + 10;
+    float required_delay = (actual_distance - 80) * (300/25);
+    int required_delay_rounded = (int) required_delay;
+    return required_delay_rounded;
+
+}
+
 void getFreeSpaceBlock() {
     /* Having detected a block in the free space, turn left, grab it, and return to the top 
     line (facing north) ready for block retrieval */
-    delay(200); // Account for sensor cone
+    stop();
+    delay(100);
+    int forwards_time = getFreeSpaceTurnDelay();
+    if (forwards_time < 0) {
+        goBackwards();
+    } else if (forwards_time > 0) {
+        goForwards();
+    }
+    Serial.print("Ultrasound distance: ");
+    Serial.println(ultrasound_distance);
+    Serial.print("Turn delay: ");
+    Serial.println(forwards_time);
+    delay(abs(forwards_time));
     stop();
     rotate90L();
     goForwards();
@@ -782,11 +797,11 @@ void setup() {
     waitForButtonPress();
 
     // Initial state of robot
-    number_of_blocks_retrieved = 0;
-    current_node = -1;
+    number_of_blocks_retrieved = 2;
+    current_node = 9;
     current_direction = north;
-    // int new_path[] = { 14 };
-    for (int n : ANTICLOCKWISE_PATH) {
+    int new_path[] = { 14 };
+    for (int n : new_path) {
         path.push(&n);
     }
     current_block_status = no_block;
