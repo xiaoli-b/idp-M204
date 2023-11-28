@@ -71,6 +71,7 @@ cppQueue path(sizeof(int));
 enum BlockStatus { no_block=-1, non_magnetic=0, magnetic=1 };
 BlockStatus current_block_status;
 int number_of_blocks_retrieved;
+int node_of_first_block;
 
 enum Turn { left90=-1, straight=0, right90=1, turn180=2 };
 
@@ -454,6 +455,9 @@ void handleBlockFound() {
 }
 
 void handleGridBlockFound() {
+    if (number_of_blocks_retrieved == 0) {
+        node_of_first_block = current_node;
+    }
     handleBlockFound();
     if (current_node == 1) { // This is some not nice hardcoding of an edge case
         path.clean();
@@ -563,8 +567,15 @@ void depositBlock() {
         goForwards();
         delay(1500);
         
-        for (int n : ANTICLOCKWISE_PATH) {
-            path.push(&n);
+        if ((node_of_first_block == 0) || ((node_of_first_block > 4) && (node_of_first_block < 9))) {
+            int new_path[] = { 2, 7, 6, 5, 0, 1 };
+            for (int n : new_path) {
+                path.push(&n);
+            }
+        } else {
+            for (int n : ANTICLOCKWISE_PATH) {
+                path.push(&n);
+            }
         }
     } else {
         for (int n : FREE_SPACE_SETUP_PATH) {
