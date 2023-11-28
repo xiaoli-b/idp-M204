@@ -393,8 +393,7 @@ void handleJunction() {
             for (int n : ANTICLOCKWISE_PATH) {
                 path.push(&n);
             }
-            handleJunction(); // This is not nice
-            return;
+            desired_direction = east;
         } else {
             Serial.println("No path set and not retrieving at node 2");
             panic();
@@ -456,12 +455,18 @@ void handleBlockFound() {
 
 void handleGridBlockFound() {
     handleBlockFound();
-    setReturnPath();
-    rotate180();
-    current_direction = mod(current_direction + 2, 4);
-    goForwards();
-    delay(500); /* Increasing this delay should help the post-block confusion
-    but will cause issues if the 180 turn isn't perfect */
+    if (current_node == 1) { // This is some not nice hardcoding of an edge case
+        path.clean();
+        int next_node = 2;
+        path.push(&next_node);
+    } else {
+        setReturnPath();
+        rotate180();
+        current_direction = mod(current_direction + 2, 4);
+        goForwards();
+        delay(500); /* Increasing this delay should help the post-block confusion
+        but will cause issues if the 180 turn isn't perfect */
+    }
 }
 
 void setReturnPath() {
@@ -557,9 +562,7 @@ void depositBlock() {
         digitalWrite(led_B, LOW);
         goForwards();
         delay(1500);
-    }
-
-    if (number_of_blocks_retrieved < 2){
+        
         for (int n : ANTICLOCKWISE_PATH) {
             path.push(&n);
         }
