@@ -190,16 +190,22 @@ void rotate180() {
     stop();
 }
 
+void rotate180Dumb() {
+    setMotors(150, -150);
+    delay(3200);
+    stop();
+}
+
 void rotate90R() {
     setMotors(150, -150);
-    delay(2100);
+    delay(1850);
     stop();
 }
 
 void rotate90L() {
     // Could use side sensors rather than timing
     setMotors(-150, 150);
-    delay(1600);
+    delay(1450);
     stop();
 }
 
@@ -369,6 +375,7 @@ void makeTurn(Turn turn) {
 
 void handleJunction() {
     stop();
+    delay(300);
     Serial.println("Junction detected");
     Serial.print("LSRs at junction: ");
     printLineSensorReadings();
@@ -387,6 +394,16 @@ void handleJunction() {
             return;
         } else if (current_node == 14) {
             desired_direction = west;
+        } else if (current_node == 1) {
+            /* Completed anticlockwise grid search path without finding block
+            (Block probably at node 1 and detected past junction) 
+            Set anticlockwise path again */
+            for (int n : ANTICLOCKWISE_PATH) {
+                path.push(&n);
+            }
+            handleJunction(); // This is not nice
+            return;
+            
         } else {
             Serial.println("No path set and not retrieving at node 2");
             panic();
@@ -405,7 +422,7 @@ void handleJunction() {
     }
 
     turnToDesiredDirection(desired_direction);
-    lineFollowForTime(300);
+    lineFollowForTime(500);
 }
 
 void turnToDesiredDirection(Direction desired_direction) {
@@ -491,7 +508,7 @@ void depositBlock() {
         lineFollow();
     }
     turnToDesiredDirection(south);
-    lineFollowForTime(1450);
+    lineFollowForTime(1300);
     if (current_block_status == magnetic) {
         rotate90R();
         current_direction = west;
@@ -535,16 +552,23 @@ void depositBlock() {
     current_block_status = no_block;
     current_direction = north;
     current_node = -1;
+
+    if (number_of_blocks_retrieved == 1) {
+        lineFollowForTime(1000);
+        goBackwards();
+        delay(1500);
+        digitalWrite(led_B, HIGH);
+        delay(5500);
+        digitalWrite(led_B, LOW);
+        goForwards();
+        delay(1500);
+    }
+
     if (number_of_blocks_retrieved < 2){
         for (int n : ANTICLOCKWISE_PATH) {
             path.push(&n);
         }
     } else {
-        if (number_of_blocks_retrieved == 2) {
-            digitalWrite(led_B, HIGH);
-            delay(5500);
-            digitalWrite(led_B, LOW);
-        }
         for (int n : FREE_SPACE_SETUP_PATH) {
             path.push(&n);
         }
@@ -665,7 +689,7 @@ bool driveAroundFreeSpaceLookingForBlock() {
 void getFreeSpaceBlock() {
     /* Having detected a block in the free space, turn left, grab it, and return to the top 
     line (facing north) ready for block retrieval */
-    delay(300); // Account for sensor cone
+    delay(200); // Account for sensor cone
     stop();
     rotate90L();
     goForwards();
@@ -689,7 +713,9 @@ void getFreeSpaceBlock() {
         handleBlockFound();
         if (current_node == 14) {
             rotate90L();
+            delay(100);
             rotate90L();
+            delay(100);
         }
         goForwards();
         while (!detectJunction()) {
@@ -702,8 +728,11 @@ void getFreeSpaceBlock() {
         if (current_node == 14) {
             // We started from the top line. We're now at the bottom of the free space and 
             // need to turn around and go back to the top.
+            // rotate180Dumb();
             rotate90L();
-            rotate90L(); // Can't use rotate180 as that relies on us driving along a line
+            delay(100);
+            rotate90L();
+            delay(100);
             goForwards();
             delay(1000);
             do {
