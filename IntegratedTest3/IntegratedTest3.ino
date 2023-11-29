@@ -153,7 +153,7 @@ void goForwards(){
 }
 
 void goForwardsFast(){
-    setMotors(220, 200);
+    setMotors(220, 202);
 }
 
 void goBackwards(){
