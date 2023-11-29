@@ -577,7 +577,7 @@ void depositBlock() {
     if (number_of_blocks_retrieved == 1) {
         lineFollowForTime(1000);
         goBackwards();
-        delay(2750);
+        delay(2650);
         stop();
         digitalWrite(led_B, HIGH);
         delay(5500);
@@ -654,7 +654,7 @@ bool driveAroundFreeSpaceLookingForBlock() {
             break;
         }
 
-        lineFollow();
+        lineFollowForTime(200);
     }
     if (block_detected) {
         return true;
@@ -693,7 +693,7 @@ bool driveAroundFreeSpaceLookingForBlock() {
             break;
         }
 
-        lineFollow();
+        lineFollowSlow();
     }
 
     if (block_detected) {
@@ -715,7 +715,7 @@ bool driveAroundFreeSpaceLookingForBlock() {
 
 int getFreeSpaceTurnDelay() {
     float actual_distance = ultrasound_distance + 10;
-    float required_delay = (actual_distance - 50) * 50;
+    float required_delay = (actual_distance - 45) * 40;
     int required_delay_rounded = (int) required_delay;
     return required_delay_rounded;
 
@@ -727,15 +727,15 @@ void getFreeSpaceBlock() {
     stop();
     delay(500);
     int forwards_time = getFreeSpaceTurnDelay();
+    Serial.print("Ultrasound distance: ");
+    Serial.println(ultrasound_distance);
+    Serial.print("Turn delay: ");
+    Serial.println(forwards_time);
     if (forwards_time < 0) {
         goBackwards();
     } else if (forwards_time > 0) {
         goForwards();
     }
-    Serial.print("Ultrasound distance: ");
-    Serial.println(ultrasound_distance);
-    Serial.print("Turn delay: ");
-    Serial.println(forwards_time);
     delay(abs(forwards_time));
     stop();
     rotate90L();
