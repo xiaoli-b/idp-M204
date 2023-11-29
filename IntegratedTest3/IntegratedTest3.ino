@@ -206,60 +206,6 @@ void rotate90L() {
     stop();
 }
 
-// void rotateOnLine(Turn turn) {
-//     if (turn == straight) {
-//         return;
-//     } else if (turn == turn180) {
-//         spinRight();
-//         turnUntilNextLine();
-//     } else {
-//         if (turn == left90) {
-//             spinLeft();
-//         } else {
-//             spinRight();
-//         }
-//         delay(750);
-//         while (!line_sensor_readings[0] || !line_sensor_readings[3]) {
-//             updateLineSensorReadings();
-//         }
-//         stop();
-//         return;
-//         if (!line_sensor_readings[0] || !line_sensor_readings[3]) {
-//             // Both sensors didn't hit the line at the same time
-//             if (!line_sensor_readings[0]) {
-//                 // Right sensor hit the line first
-//                 if (turn == left90) {
-//                     setMotors(-100, 0);
-//                 } else {
-//                     setMotors(100, 0);
-//                 }
-//                 while (!line_sensor_readings[0]) {
-//                     // Turn until left sensor hits line
-//                     updateLineSensorReadings();
-//                     if (!line_sensor_readings[3]) {
-//                         panic();
-//                     }
-//                 }
-//             } else {
-//                 // Left sensor hit the line first
-//                 if (turn == left90) {
-//                     setMotors(0, 100);
-//                 } else {
-//                     setMotors(0, -100);
-//                 }
-//                 while (!line_sensor_readings[3]) {
-//                     // Turn until right sensor hits line
-//                     updateLineSensorReadings();
-//                     if (!line_sensor_readings[0]) {
-//                         panic();
-//                     }
-//                 }
-//             }
-//             stop();
-//         }
-//     }
-// }
-
 bool detectJunction(){
     /* Are we currently at a junction */
 
@@ -363,8 +309,8 @@ void turnUntilNextLine() {
 }
 
 void makeTurn(Turn turn) {
-    goForwards();
-    delay(50);
+    // goForwards();
+    // delay(50);
     stop();
 
     switch (turn) {
@@ -577,7 +523,7 @@ void depositBlock() {
     if (number_of_blocks_retrieved == 1) {
         lineFollowForTime(1000);
         goBackwards();
-        delay(2650);
+        delay(2300);
         stop();
         digitalWrite(led_B, HIGH);
         delay(5500);
@@ -641,7 +587,7 @@ bool driveAroundFreeSpaceLookingForBlock() {
     if (current_direction != west) {
         turnToDesiredDirection(west);
     }
-    lineFollowForTime(2000);
+    lineFollowForTime(1000);
 
     // Drive 14-->10 checking for block
     while (!detectJunction()) {
