@@ -153,11 +153,11 @@ void goForwards(){
 }
 
 void goForwardsFast(){
-    setMotors(220, 202);
+    setMotors(200, 181);
 }
 
 void goBackwards(){
-    setMotors(-145, -157);
+    setMotors(-146, -157);
 }
 void spinRight(){
     setMotors(155, -150);
@@ -470,10 +470,10 @@ void depositBlock() {
     while(!detectJunction()) {
         updateLineSensorReadings();
         updateFlashingLED();
-        lineFollow();
+        lineFollowSlow();
     }
     turnToDesiredDirection(south);
-    lineFollowForTime(1300);
+    lineFollowForTime(1350);
     if (current_block_status == magnetic) {
         rotate90R();
         current_direction = west;
@@ -495,7 +495,7 @@ void depositBlock() {
     while(!detectJunction()) {
         updateLineSensorReadings();
         updateFlashingLED();
-        lineFollow();
+        lineFollowSlow();
     }
     if (current_block_status == magnetic) {
         turnToDesiredDirection(east);
@@ -506,7 +506,7 @@ void depositBlock() {
     while(!detectJunction()) {
       updateLineSensorReadings();
       updateFlashingLED();
-      lineFollow();
+      lineFollowSlow();
     }
     turnToDesiredDirection(north);
     stop();
