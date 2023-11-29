@@ -151,6 +151,10 @@ void goForwards(){
     setMotors(175, 160);
 }
 
+void goForwardsFast(){
+    setMotors(220, 200);
+}
+
 void goBackwards(){
     setMotors(-145, -157);
 }
@@ -299,6 +303,20 @@ void lineFollow() {
         // Deviating left
         turnRight();
     } else {
+        goForwardsFast();
+    }
+}
+
+void lineFollowSlow() {
+    /* Line following */
+
+    if ((line_sensor_readings[1] == 1) && (line_sensor_readings[2] == 0)) {
+        // Deviating right
+        turnLeft();
+    } else if ((line_sensor_readings[1] == 0) && (line_sensor_readings[2] == 1)) {
+        // Deviating left
+        turnRight();
+    } else {
         goForwards();
     }
 }
@@ -308,7 +326,7 @@ void lineFollowForTime(int time_ms) {
     unsigned long end_time = start_time;
     while ((end_time - start_time) < time_ms) {
         updateLineSensorReadings();
-        lineFollow();
+        lineFollowSlow();
         end_time = millis();
     }
 }
