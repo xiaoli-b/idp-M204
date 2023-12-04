@@ -1,3 +1,5 @@
+/* Unused code for turning 180 degrees at a junction without relying on timing the turn. */
+
 #include <iostream>
 using namespace std;
 
