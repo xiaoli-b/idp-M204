@@ -71,7 +71,7 @@ cppQueue path(sizeof(int));
 enum BlockStatus { no_block=-1, non_magnetic=0, magnetic=1 };
 BlockStatus current_block_status;
 int number_of_blocks_retrieved;
-int node_of_first_block;
+int node_of_first_block; // Used to (non-optimally) shorten search route for second block
 
 enum Turn { left90=-1, straight=0, right90=1, turn180=2 };
 
@@ -89,6 +89,10 @@ const int FREE_SPACE_SETUP_PATH[5] = { 2, 3, 4, 9, 14 };
 /* Path from top left back to start */
 const int FREE_SPACE_RETURN_PATH[5] = { 10, 5, 0, 1, 2 };
 
+/**
+ * @brief Panic mode. Stops the robot if something has gone critically wrong.
+ * 
+ */
 void panic() {
     stop();
     digitalWrite(led_R, HIGH);
@@ -139,6 +143,13 @@ void printLineSensorReadings() {
     Serial.println();
 }
 
+/**
+ * @brief Set the speeds of the two motors. Because of the orientation of the motors,
+ * they must be set to run backwards when we wish to go forwards and vice versa.
+ * 
+ * @param new_left_speed Desired speed of the left motor between -255 and 255
+ * @param new_right_speed Desired speed of the right motor between -255 and 255
+ */
 void setMotors(int new_left_speed, int new_right_speed) {
     left_speed = new_left_speed * MOTOR_SPEED_FACTOR[0];
     right_speed = new_right_speed * MOTOR_SPEED_FACTOR[1];
@@ -179,6 +190,11 @@ void stop(){
     setMotors(0, 0);
 }
 
+/**
+ * @brief Semi-smart 180 turning. Turns blind for a time and then continues turning until the
+ * front sensors are on the line.
+ * 
+ */
 void rotate180() {
     setMotors(150, -150);
     delay(2750);
@@ -187,34 +203,56 @@ void rotate180() {
     stop();
 }
 
+/**
+ * @brief Turn 180 degrees solely using a calibrated time delay. Should only be used when the
+ * robot is not line-following.
+ * 
+ */
 void rotate180Dumb() {
     setMotors(150, -150);
     delay(3200);
     stop();
 }
 
+/**
+ * @brief Turns 90 degrees right using a time delay. To turn using the line sensors instead, use 
+ * `spinRight()` followed by `turnUntilNextLine()`.
+ * 
+ */
 void rotate90R() {
     setMotors(150, -150);
     delay(1850);
     stop();
 }
 
+/**
+ * @brief Turns 90 degrees left using a time delay. To turn using the line sensors instead, use 
+ * `spinLeft()` followed by `turnUntilNextLine()`.
+ * 
+ */
 void rotate90L() {
-    // Could use side sensors rather than timing
     setMotors(-150, 150);
     delay(1450);
     stop();
 }
 
+/**
+ * @brief Use the back line sensors to detect if we are currently at a junction.
+ * 
+ * @return Whether the robot is at a junction or not
+ */
 bool detectJunction(){
-    /* Are we currently at a junction */
-
     return ((line_sensor_readings[0]==1) || (line_sensor_readings[3]==1));
 }
 
+/**
+ * @brief Get the compass direction between two adjacent nodes
+ * 
+ * @param start_node int
+ * @param end_node int
+ * @return Direction enum
+ */
 Direction getDesiredDirection(int start_node, int end_node) {
-    /* Get the compass direction between two adjacent nodes */
-
     if ((start_node/5) == (end_node/5)) {
         // nodes are on the same line
         int difference = end_node - start_node;
@@ -233,6 +271,13 @@ Direction getDesiredDirection(int start_node, int end_node) {
     }
 }
 
+/**
+ * @brief Get the turn required to go from one compass direction to another
+ * 
+ * @param start_direction Direction enum
+ * @param end_direction Direction enum
+ * @return Turn enum
+ */
 Turn getDesiredTurn(Direction start_direction, Direction end_direction) {
     /* Get the turn required to get from one compass direction to another */
     int difference = mod(end_direction - start_direction + 1,  4) - 1;
@@ -240,9 +285,12 @@ Turn getDesiredTurn(Direction start_direction, Direction end_direction) {
     return Turn(difference);
 }
 
+/**
+ * @brief Use the front two sensors to follow a line, correcting itself if it deviates
+ * from the line. For use in loops.
+ * 
+ */
 void lineFollow() {
-    /* Line following */
-
     if ((line_sensor_readings[1] == 1) && (line_sensor_readings[2] == 0)) {
         // Deviating right
         turnLeft();
@@ -254,8 +302,12 @@ void lineFollow() {
     }
 }
 
+/**
+ * @brief Variation of `lineFollow` where extra precision is required.
+ * 
+ */
 void lineFollowSlow() {
-    /* Line following */
+    // TODO: Merge with `lineFollow` into a single function.
 
     if ((line_sensor_readings[1] == 1) && (line_sensor_readings[2] == 0)) {
         // Deviating right
@@ -268,6 +320,11 @@ void lineFollowSlow() {
     }
 }
 
+/**
+ * @brief Wrapper around `lineFollowSlow` that runs in a loop for a given amount of time.
+ * 
+ * @param time_ms Time to line follow for in milliseconds
+ */
 void lineFollowForTime(int time_ms) {
     unsigned long start_time = millis();
     unsigned long end_time = start_time;
@@ -278,21 +335,12 @@ void lineFollowForTime(int time_ms) {
     }
 }
 
+/**
+ * @brief Having already started a turn, continue turning until you hit the perpendicular white line
+ * 
+ */
 void turnUntilNextLine() {
-    /* Having already started a turn, continue turning until you hit the perpendicular white line */
-
     Serial.print("Beginning turn to next line. LSRs: ");
-    printLineSensorReadings();
-
-    // while (true) {
-    //     // Turn until front sensors are off the line
-    //     updateLineSensorReadings();
-    //     if ((line_sensor_readings[1] == line_sensor_readings[2]) && (line_sensor_readings[2] == 0)) {
-    //         break;
-    //     }
-    // }
-
-    Serial.print("Continuing turn until front sensors hit line. LSRs: ");
     printLineSensorReadings();
 
     while (true) {
@@ -308,9 +356,12 @@ void turnUntilNextLine() {
     delay(100);
 }
 
+/**
+ * @brief Make a given turn
+ * 
+ * @param turn enum
+ */
 void makeTurn(Turn turn) {
-    // goForwards();
-    // delay(50);
     stop();
 
     switch (turn) {
@@ -330,6 +381,11 @@ void makeTurn(Turn turn) {
     turnUntilNextLine();
 }
 
+/**
+ * @brief Main function for handling a junction while path-following. Makes any required turns
+ * according to the current `path`.
+ * 
+ */
 void handleJunction() {
     stop();
     delay(300);
@@ -343,11 +399,15 @@ void handleJunction() {
     if (path.isEmpty()) {
         Serial.print("Path empty. Handling behaviour for node ");
         Serial.println(current_node);
+        // TODO: Find neater implementation for block retrieval 
+        // than catching the -1 and 2 nodes here.
         if (current_node == 2) {
+            // Currently carrying a block and is at node 2, ready to begin block depositing.
             desired_direction = south;
             int n = -1;
             path.push(&n);
         } else if (current_node == -1) {
+            // Mid block depositing.
             return;
         } else if (current_node == 14) {
             desired_direction = west;
@@ -394,8 +454,12 @@ void turnToDesiredDirection(Direction desired_direction) {
     current_direction = desired_direction;
 }
 
+/**
+ * @brief Detect block type and set LEDs and variables accordingly. For use with both grid
+ * blocks and free-space blocks.
+ * 
+ */
 void handleBlockFound() {
-    /* Detect block type and set LEDs and variables accordingly */
     goForwards();
     delay(300);
     stop();
@@ -418,6 +482,10 @@ void handleBlockFound() {
     }
 }
 
+/**
+ * @brief Function called when we detect a grid block. Calls `handleBlockFound` and `setReturnPath`.
+ * 
+ */
 void handleGridBlockFound() {
     if (number_of_blocks_retrieved == 0) {
         node_of_first_block = current_node;
@@ -437,6 +505,11 @@ void handleGridBlockFound() {
     }
 }
 
+/**
+ * @brief After finding a grid block, set the path for the return home. Needs to avoid 
+ * going over unvisited nodes in case there is a block there.
+ * 
+ */
 void setReturnPath() {
     // TODO: Be smart and choose the shortest path possible when retrieving the 
     // second block. Issue currently is handling the node/junction underneath the block.
@@ -457,10 +530,12 @@ void setReturnPath() {
     }
 }
 
+/**
+ * @brief Function for depositing a block. Starting from the top of the start box facing 
+ * south, finishing past the top of the start block facing north (on the way to 2).
+ * 
+ */
 void depositBlock() {
-    /* Predefined code depositing a block. Starting from the top of the start box facing
-    south, finishing past the top of the start block facing north (on the way to 2) */
-
     if (current_block_status == magnetic) {
         turnToDesiredDirection(west);
     } else {
@@ -510,10 +585,6 @@ void depositBlock() {
     }
     turnToDesiredDirection(north);
     stop();
-    // goBackwards();
-    // delay(1500);
-    // stop();
-    // delay(5000);
 
     number_of_blocks_retrieved++;
     current_block_status = no_block;
@@ -549,9 +620,14 @@ void depositBlock() {
     lineFollowForTime(1000);
 }
 
+/**
+ * @brief Algorithm for searching for a block in the free space. Starts at junction 14 and 
+ * begins a loop around the free space. While on a long edge, scans with the side-mounted ultrasound
+ * for a block. Attempts to get the block. If it misses, it return to node 14 and begins the loop 
+ * again. If it gets the block, it begins the retrieval process.
+ * 
+ */
 void freeSearch() {
-    /* Starts at junction 14 */
-
     bool block_detected = false;
     // Drive around free space until a block is detected
     while (!block_detected) {
@@ -578,8 +654,15 @@ void freeSearch() {
 
 }
 
+/**
+ * @brief Drives a single loop around the free space. Returns if it detects a block while on a 
+ * long edge.
+ * 
+ * @return bool: True if block detected while on long edge of free-space. 
+ * False if no block detected during loop - finished loop at node 14 facing North.
+ */
 bool driveAroundFreeSpaceLookingForBlock() {
-    // TODO: Lots of hard-coding here that I'm not sure I like
+    // TODO: Lots of hard-coding here that could be improved
     bool block_detected = false;
     if (current_node != 14) {
         panic();
@@ -659,6 +742,13 @@ bool driveAroundFreeSpaceLookingForBlock() {
     return false;
 }
 
+/**
+ * @brief Get the amount of time to drive forward for in order to be properly line up with a 
+ * free-space block. A function of the distance to the block. (Negative to go backwards).
+ * 
+ * @return int Time in ms to drive forwards for (negative for backwards) before turning to retrieve
+ * a free-space block.
+ */
 int getFreeSpaceTurnDelay() {
     float actual_distance = ultrasound_distance + 10;
     float required_delay = (actual_distance - 45) * 40;
@@ -667,11 +757,17 @@ int getFreeSpaceTurnDelay() {
 
 }
 
+/**
+ * @brief Having detected a block in the free space, turn and attempt to get it.
+ * 
+ */
 void getFreeSpaceBlock() {
-    /* Having detected a block in the free space, turn left, grab it, and return to the top 
-    line (facing north) ready for block retrieval */
     stop();
     delay(500);
+
+    // Because of the detection cone of the ultrasound, we may need to drive a bit forwards
+    // backwards (depending on distance to block) before turning to make sure we are lined
+    // up properly.
     int forwards_time = getFreeSpaceTurnDelay();
     Serial.print("Ultrasound distance: ");
     Serial.println(ultrasound_distance);
@@ -737,6 +833,10 @@ void getFreeSpaceBlock() {
     }
 }
 
+/**
+ * @brief Make the blue LED flash. Should be included in any loop in which the robot is moving.
+ * 
+ */
 void updateFlashingLED() {
     digitalWrite(led_B, mod((millis() / 500), 2));
 }
@@ -774,7 +874,7 @@ void setup() {
     pinMode(green_button_pin, INPUT);
     waitForButtonPress();
 
-    // Initial state of robot
+    // Initial state of robot. Can be altered to easily test the robot in different scenarios.
     number_of_blocks_retrieved = 0;
     current_node = -1;
     current_direction = north;
@@ -788,6 +888,10 @@ void setup() {
     delay(2000);
 }
 
+/**
+ * @brief Main loop for robot activity. Handles path -following and block detection.
+ * 
+ */
 void loop(){
     // Pause if button pressed
     val_green_button = digitalRead(green_button_pin);
